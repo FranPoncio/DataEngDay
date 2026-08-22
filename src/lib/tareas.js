@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { toISO, parseISO, hoy, sumarDias } from "./formato";
 
 export const FASES = [
   { id: "pre", nombre: "Pre-viaje", sub: "Córdoba" },
@@ -22,8 +23,7 @@ export const ESTADOS = [
 /* Con 30+ pendientes, una lista plana cansa: se separan las urgentes del resto.
    La usan Planning (columna Pendiente) y Hoy. */
 export function porCercania(items) {
-  const n = new Date();
-  const base = new Date(n.getFullYear(), n.getMonth(), n.getDate());
+  const base = hoy();
   const hoyISO = toISO(base);
   const finISO = toISO(sumarDias(base, 7));
 
@@ -84,12 +84,6 @@ const BASE = [
   ["cierre", 365, 1, "Vence la visa", "12 meses desde la primera entrada.", null],
 ];
 
-const DIA = 86400000;
-export const parseISO = (s) => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
-export const toISO = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-export const hoy = () => { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()); };
-export const sumarDias = (b, n) => new Date(b.getTime() + n * DIA);
-export const difDias = (a, b) => Math.round((a.getTime() - b.getTime()) / DIA);
 
 /* Si el grupo todavía no tiene fila en `grupos` (tabla nueva, sin FK a los
    grupo_id ya usados en miembros/gastos/pagos), la crea con ese mismo id

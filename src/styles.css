@@ -26,6 +26,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--marca);outline-
 .error{color:var(--marca);font-size:13px;}
 .error.banda{margin:0 16px;padding:9px 12px;background:rgba(240,96,60,.1);border-radius:10px;}
 .cargando{padding:70px 24px;text-align:center;color:var(--t2);}
+.btn.recuperar{max-width:220px;margin:18px auto 0;}
 
 .app{max-width:600px;margin:0 auto;padding-bottom:130px;}
 
@@ -241,6 +242,16 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--marca);outline-
 .buscador input{width:100%;padding:10px 13px;border:1px solid var(--linea);border-radius:11px;background:var(--alto);color:var(--tinta);font-size:14px;}
 
 .pie{display:flex;align-items:center;justify-content:space-between;margin:28px 16px 0;padding-top:16px;border-top:1px solid var(--linea);}
+.exportar{margin:22px 16px 0;text-align:center;}
+
+.aviso-fijos{display:flex;align-items:center;gap:12px;margin:12px 16px 0;padding:11px 13px;background:rgba(192,138,0,.1);border-radius:11px;font-size:13px;}
+.aviso-fijos span{flex:1;}
+.aviso-fijos .link{flex:none;white-space:nowrap;}
+
+.fijo{display:flex;align-items:center;gap:9px;width:100%;margin-top:14px;padding:11px;border:1px solid var(--linea);border-radius:11px;background:var(--alto);font-size:13.5px;text-align:left;color:var(--t2);}
+.fijo.on{border-color:var(--verde);color:var(--tinta);}
+.fijo-caja{width:19px;height:19px;flex:none;border-radius:6px;border:1.8px solid var(--linea);display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;}
+.fijo.on .fijo-caja{background:var(--verde);border-color:var(--verde);}
 
 .saldo-mini{margin:18px 16px 0;padding:16px;border-radius:14px;background:var(--alto);text-align:center;}
 .saldo-mini p{margin:0;}

@@ -34,19 +34,37 @@ export async function traerContexto() {
   };
 }
 
-export async function traerGastos(grupo_id, { desde, hasta } = {}) {
-  let q = supabase
-    .from("gastos")
-    .select("*")
-    .eq("grupo_id", grupo_id)
-    .order("fecha", { ascending: false })
-    .order("creado", { ascending: false })
-    .limit(300);
-  if (desde) q = q.gte("fecha", desde);
-  if (hasta) q = q.lte("fecha", hasta);
-  const { data, error } = await q;
-  if (error) throw error;
-  return data;
+const PAGINA = 1000;
+
+/* `limite` corta la consulta: sirve para las vistas de lista, que solo
+   muestran los últimos. Sin `limite` trae TODO lo del rango paginando —
+   los totales del Resumen tienen que ser exactos, no los primeros N. */
+export async function traerGastos(grupo_id, { desde, hasta, limite } = {}) {
+  const arma = () => {
+    let q = supabase
+      .from("gastos")
+      .select("*")
+      .eq("grupo_id", grupo_id)
+      .order("fecha", { ascending: false })
+      .order("creado", { ascending: false });
+    if (desde) q = q.gte("fecha", desde);
+    if (hasta) q = q.lte("fecha", hasta);
+    return q;
+  };
+
+  if (limite) {
+    const { data, error } = await arma().limit(limite);
+    if (error) throw error;
+    return data;
+  }
+
+  const todo = [];
+  for (let pagina = 0; ; pagina++) {
+    const { data, error } = await arma().range(pagina * PAGINA, (pagina + 1) * PAGINA - 1);
+    if (error) throw error;
+    todo.push(...data);
+    if (data.length < PAGINA) return todo;
+  }
 }
 
 export async function traerSaldos(grupo_id) {
@@ -70,16 +88,25 @@ export async function traerPorRubro(grupo_id, mes) {
 
 /* -------------------------------------------------------------- escritura */
 
+/* Pura y exportada aparte de cargarGasto: es plata real, tiene tests.
+   `monto_base` es el gasto llevado a NZD; `deuda` es lo que le toca al otro.
+   El servidor recalcula ambos al insertar — esto es solo para pintar la fila
+   antes de que la red conteste (y para lo que queda en la cola offline). */
+export function calcularMontos(gasto) {
+  const base = +(Number(gasto.monto) * (Number(gasto.tc_a_base) || 1)).toFixed(2);
+  const deuda =
+    gasto.split === "mitad" ? +(base / 2).toFixed(2)
+    : gasto.split === "propio" ? 0
+    : Number(gasto.monto_exacto || 0);
+  return { monto_base: base, deuda };
+}
+
 export async function cargarGasto(gasto) {
   const optimista = {
     ...gasto,
     id: gasto.id || `tmp-${crypto.randomUUID()}`,
     creado: new Date().toISOString(),
-    monto_base: +(gasto.monto * (gasto.tc_a_base ?? 1)).toFixed(2),
-    deuda:
-      gasto.split === "mitad" ? +((gasto.monto * (gasto.tc_a_base ?? 1)) / 2).toFixed(2)
-      : gasto.split === "propio" ? 0
-      : Number(gasto.monto_exacto || 0),
+    ...calcularMontos(gasto),
     pendiente: true,
   };
 
@@ -92,6 +119,52 @@ export async function cargarGasto(gasto) {
     guardarCola([...leerCola(), optimista]);
     return { fila: optimista, pendiente: true };
   }
+}
+
+/* Gastos fijos: los que están marcados como recurrentes y todavía no
+   aparecen en el mes pedido. Se comparan por descripción+rubro, que es lo
+   que identifica al gasto fijo aunque cambie el monto (un alquiler que
+   aumenta sigue siendo el mismo alquiler). */
+export async function recurrentesFaltantes(grupo_id, { desde, hasta }) {
+  const [{ data: fijos, error: e1 }, { data: delMes, error: e2 }] = await Promise.all([
+    supabase.from("gastos").select("*").eq("grupo_id", grupo_id).eq("recurrente", true)
+      .order("fecha", { ascending: false }),
+    supabase.from("gastos").select("descripcion, rubro").eq("grupo_id", grupo_id)
+      .gte("fecha", desde).lte("fecha", hasta),
+  ]);
+  if (e1) throw e1;
+  if (e2) throw e2;
+
+  const clave = (g) => `${g.descripcion}|${g.rubro}`;
+  const yaEstan = new Set((delMes || []).map(clave));
+
+  // Un fijo puede tener muchas ocurrencias viejas: nos quedamos con la última
+  const vistos = new Set();
+  return (fijos || []).filter((g) => {
+    const k = clave(g);
+    if (vistos.has(k) || yaEstan.has(k)) return false;
+    vistos.add(k);
+    return true;
+  });
+}
+
+export async function cargarRecurrentes(faltantes, fecha) {
+  const filas = faltantes.map((g) => ({
+    grupo_id: g.grupo_id,
+    fecha,
+    descripcion: g.descripcion,
+    rubro: g.rubro,
+    monto: g.monto,
+    moneda: g.moneda,
+    tc_a_base: g.tc_a_base,
+    pagador_id: g.pagador_id,
+    split: g.split,
+    monto_exacto: g.monto_exacto,
+    recurrente: true,
+  }));
+  const { data, error } = await supabase.from("gastos").insert(filas).select();
+  if (error) throw error;
+  return data;
 }
 
 export async function actualizarGasto(id, cambios) {

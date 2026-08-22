@@ -19,7 +19,7 @@ export default function Hoy({ contexto, onIrA }) {
       const g = await traerGrupo(grupo_id);
       const [t, gs, s] = await Promise.all([
         g.fecha_llegada ? traerTareas(grupo_id) : Promise.resolve([]),
-        traerGastos(grupo_id),
+        traerGastos(grupo_id, { limite: 10 }),
         traerSaldos(grupo_id),
       ]);
       setTareas(t);

@@ -2,8 +2,9 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   traerGastos, traerSaldos, cargarGasto, borrarGasto, actualizarGasto,
   saldarCuentas, sincronizarCola, cantidadEnCola, escucharCambios, rubroDe,
+  recurrentesFaltantes, cargarRecurrentes,
 } from "../../lib/gastos";
-import { plata, fechaCorta } from "../../lib/formato";
+import { plata, fechaCorta, hoyISO, rangoMes } from "../../lib/formato";
 import NuevoGasto from "../NuevoGasto";
 
 export default function Gastos({ contexto }) {
@@ -14,19 +15,33 @@ export default function Gastos({ contexto }) {
   const [filtro, setFiltro] = useState(null);
   const [abrirNuevo, setAbrirNuevo] = useState(false);
   const [editando, setEditando] = useState(null);
+  const [fijos, setFijos] = useState([]);
   const [enCola, setEnCola] = useState(cantidadEnCola());
   const [error, setError] = useState("");
 
   const refrescar = useCallback(async () => {
     try {
-      const [g, s] = await Promise.all([traerGastos(grupo_id), traerSaldos(grupo_id)]);
+      const n = new Date();
+      const [g, s, f] = await Promise.all([
+        traerGastos(grupo_id, { limite: 300 }),
+        traerSaldos(grupo_id),
+        recurrentesFaltantes(grupo_id, rangoMes(n.getFullYear(), n.getMonth())),
+      ]);
       setGastos(g);
       setSaldos(s);
+      setFijos(f);
       setError("");
     } catch {
       setError("No se pudieron traer los datos. Revisá la conexión.");
     }
   }, [grupo_id]);
+
+  const ponerFijos = async () => {
+    try {
+      await cargarRecurrentes(fijos, hoyISO());
+      await refrescar();
+    } catch (e) { setError(`No se pudieron cargar los fijos: ${e.message}`); }
+  };
 
   useEffect(() => {
     (async () => {
@@ -137,6 +152,18 @@ export default function Gastos({ contexto }) {
       </nav>
 
       {error && <p className="error banda">{error}</p>}
+
+      {fijos.length > 0 && (
+        <div className="aviso-fijos">
+          <span>
+            {fijos.length === 1
+              ? "Falta cargar 1 gasto fijo de este mes"
+              : `Faltan cargar ${fijos.length} gastos fijos de este mes`}
+            <span className="chico"> · {fijos.map((f) => f.descripcion).join(", ")}</span>
+          </span>
+          <button className="link" onClick={ponerFijos}>Cargarlos</button>
+        </div>
+      )}
 
       <main className="lista">
         {porDia.length === 0 && <p className="vacio">Todavía no hay gastos. Tocá el + para cargar el primero.</p>}

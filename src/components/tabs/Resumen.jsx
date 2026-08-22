@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "../../lib/supabase";
 import { traerGastos, traerSaldos, rubroDe } from "../../lib/gastos";
 import { plata, MESES_LARGO, rangoMes } from "../../lib/formato";
+import { gastosACSV, bajarCSV } from "../../lib/csv";
 
 export default function Resumen({ contexto }) {
   const { grupo_id, miembros } = contexto;
@@ -77,6 +78,15 @@ export default function Resumen({ contexto }) {
   const empate = Math.abs(miSaldo) < 0.01;
 
   const maximo = porRubro.length ? porRubro[0].total : 0;
+
+  const alias = (id) => miembros.find((m) => m.user_id === id)?.alias || "?";
+  const exportar = () => {
+    const sufijo =
+      modo === "mes" ? `${anio}-${String(mes + 1).padStart(2, "0")}`
+      : modo === "anio" ? String(anio)
+      : "historico";
+    bajarCSV(`gastos-${sufijo}.csv`, gastosACSV(gastos, alias));
+  };
 
   return (
     <div className="tab-resumen">
@@ -154,6 +164,14 @@ export default function Resumen({ contexto }) {
         </p>
         {!empate && <p className="saldo-mini-n">${plata(miSaldo)}</p>}
       </section>
+
+      {gastos.length > 0 && (
+        <div className="exportar">
+          <button className="link" onClick={exportar}>
+            Descargar CSV ({gastos.length} {gastos.length === 1 ? "gasto" : "gastos"})
+          </button>
+        </div>
+      )}
 
       <footer className="pie">
         <span className="chico">Sesión de {contexto.yo?.alias}</span>

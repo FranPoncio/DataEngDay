@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { RUBROS, tasaDe } from "../lib/gastos";
+import { hoyISO } from "../lib/formato";
 
 /* Carga en tres toques: monto, rubro, quién pagó. Lo demás está detrás de
    "más opciones". Si recibe `gasto`, edita ese en vez de crear uno nuevo. */
@@ -15,7 +16,8 @@ export default function NuevoGasto({ contexto, gasto, onGuardar, onBorrar, onCer
   const [montoExacto, setMontoExacto] = useState(gasto?.monto_exacto != null ? String(gasto.monto_exacto) : "");
   const [moneda, setMoneda] = useState(gasto?.moneda || "NZD");
   const [tc, setTc] = useState(gasto ? String(gasto.tc_a_base ?? 1) : "1");
-  const [fecha, setFecha] = useState(gasto?.fecha || new Date().toISOString().slice(0, 10));
+  const [fecha, setFecha] = useState(gasto?.fecha || hoyISO());
+  const [recurrente, setRecurrente] = useState(!!gasto?.recurrente);
   const [mas, setMas] = useState(false);
   const [guardando, setGuardando] = useState(false);
 
@@ -35,6 +37,7 @@ export default function NuevoGasto({ contexto, gasto, onGuardar, onBorrar, onCer
       pagador_id: pagador,
       split,
       monto_exacto: split === "exacto" ? Number(montoExacto) || 0 : null,
+      recurrente,
     });
     setGuardando(false);
     onCerrar();
@@ -118,6 +121,16 @@ export default function NuevoGasto({ contexto, gasto, onGuardar, onBorrar, onCer
 
             <label>Fecha</label>
             <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
+
+            <button className={`fijo ${recurrente ? "on" : ""}`}
+              role="switch" aria-checked={recurrente}
+              onClick={() => setRecurrente(!recurrente)}>
+              <span className="fijo-caja">{recurrente && "✓"}</span>
+              <span>
+                Se repite todos los meses
+                <span className="chico"> · te lo recuerda para cargarlo</span>
+              </span>
+            </button>
           </div>
         )}
 
