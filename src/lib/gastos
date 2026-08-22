@@ -1,0 +1,174 @@
+import { supabase } from "./supabase";
+
+/* La UI nunca espera a la red: el gasto se pinta primero, se manda después,
+   y si no hay señal queda en cola hasta que vuelva. */
+
+const COLA = "dbd:cola";
+
+const leerCola = () => {
+  try { return JSON.parse(localStorage.getItem(COLA) || "[]"); }
+  catch { return []; }
+};
+const guardarCola = (c) => localStorage.setItem(COLA, JSON.stringify(c));
+
+export const cantidadEnCola = () => leerCola().length;
+
+/* -------------------------------------------------------------- lecturas */
+
+export async function traerContexto() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data: miembros, error } = await supabase
+    .from("miembros")
+    .select("grupo_id, user_id, alias, color");
+  if (error) throw error;
+  if (!miembros?.length) return { user, grupo_id: null, miembros: [] };
+
+  const grupo_id = miembros[0].grupo_id;
+  return {
+    user,
+    grupo_id,
+    miembros: miembros.filter((m) => m.grupo_id === grupo_id),
+    yo: miembros.find((m) => m.user_id === user.id),
+  };
+}
+
+export async function traerGastos(grupo_id, { desde, hasta } = {}) {
+  let q = supabase
+    .from("gastos")
+    .select("*")
+    .eq("grupo_id", grupo_id)
+    .order("fecha", { ascending: false })
+    .order("creado", { ascending: false })
+    .limit(300);
+  if (desde) q = q.gte("fecha", desde);
+  if (hasta) q = q.lte("fecha", hasta);
+  const { data, error } = await q;
+  if (error) throw error;
+  return data;
+}
+
+export async function traerSaldos(grupo_id) {
+  const { data, error } = await supabase
+    .from("saldos")
+    .select("user_id, saldo")
+    .eq("grupo_id", grupo_id);
+  if (error) throw error;
+  return data;
+}
+
+export async function traerPorRubro(grupo_id, mes) {
+  const { data, error } = await supabase
+    .from("gastos_por_rubro")
+    .select("rubro, total, cantidad")
+    .eq("grupo_id", grupo_id)
+    .eq("mes", mes);
+  if (error) throw error;
+  return data;
+}
+
+/* -------------------------------------------------------------- escritura */
+
+export async function cargarGasto(gasto) {
+  const optimista = {
+    ...gasto,
+    id: gasto.id || `tmp-${crypto.randomUUID()}`,
+    creado: new Date().toISOString(),
+    monto_base: +(gasto.monto * (gasto.tc_a_base ?? 1)).toFixed(2),
+    deuda:
+      gasto.split === "mitad" ? +((gasto.monto * (gasto.tc_a_base ?? 1)) / 2).toFixed(2)
+      : gasto.split === "propio" ? 0
+      : Number(gasto.monto_exacto || 0),
+    pendiente: true,
+  };
+
+  try {
+    const { pendiente, id, monto_base, deuda, creado, ...limpio } = optimista;
+    const { data, error } = await supabase.from("gastos").insert(limpio).select().single();
+    if (error) throw error;
+    return { fila: data, pendiente: false };
+  } catch (e) {
+    guardarCola([...leerCola(), optimista]);
+    return { fila: optimista, pendiente: true };
+  }
+}
+
+export async function borrarGasto(id) {
+  if (String(id).startsWith("tmp-")) {
+    guardarCola(leerCola().filter((g) => g.id !== id));
+    return;
+  }
+  const { error } = await supabase.from("gastos").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function saldarCuentas({ grupo_id, de_id, a_id, monto, moneda = "NZD", tc_a_base = 1 }) {
+  const { data, error } = await supabase
+    .from("pagos")
+    .insert({ grupo_id, de_id, a_id, monto, moneda, tc_a_base })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function sincronizarCola() {
+  const cola = leerCola();
+  if (!cola.length) return { enviados: 0, restantes: 0 };
+
+  const quedan = [];
+  let enviados = 0;
+
+  for (const fila of cola) {
+    try {
+      const { pendiente, id, monto_base, deuda, creado, ...limpio } = fila;
+      const { error } = await supabase.from("gastos").insert(limpio);
+      if (error) throw error;
+      enviados++;
+    } catch {
+      quedan.push(fila);
+    }
+  }
+  guardarCola(quedan);
+  return { enviados, restantes: quedan.length };
+}
+
+/* --------------------------------------------------------------- realtime */
+
+export function escucharCambios(grupo_id, alCambiar) {
+  const canal = supabase
+    .channel(`grupo-${grupo_id}`)
+    .on("postgres_changes",
+      { event: "*", schema: "public", table: "gastos", filter: `grupo_id=eq.${grupo_id}` },
+      alCambiar)
+    .on("postgres_changes",
+      { event: "*", schema: "public", table: "pagos", filter: `grupo_id=eq.${grupo_id}` },
+      alCambiar)
+    .subscribe();
+
+  return () => supabase.removeChannel(canal);
+}
+
+/* ----------------------------------------------------------------- rubros */
+
+export const RUBROS = [
+  { id: "casa", nombre: "Casa", color: "#31866F" },
+  { id: "comida", nombre: "Comida", color: "#C08A33" },
+  { id: "salidas", nombre: "Salidas", color: "#E9663B" },
+  { id: "estudio", nombre: "Estudio", color: "#5B7DB1" },
+  { id: "tramites", nombre: "Trámites", color: "#8B6BA8" },
+  { id: "setup", nombre: "Setup", color: "#B15B7D" },
+  { id: "transporte", nombre: "Transporte", color: "#4A8CA8" },
+  { id: "otros", nombre: "Otros", color: "#7A8B80" },
+];
+
+export const rubroDe = (id) => RUBROS.find((r) => r.id === id) || RUBROS[RUBROS.length - 1];
+
+/* ------------------------------------------------------------- monedas */
+
+/* Tasas fijas de referencia, tomadas el 21-22/08/2026 (blue venta ~$1550
+   ARS/USD). No se actualizan en vivo — son un punto de partida editable
+   a mano en el formulario. Base = NZD. */
+export const TASAS = { NZD: 1, USD: 1.6717, AUD: 1.1907, ARS: 0.0010785 };
+export const tasaDe = (moneda) => TASAS[moneda] ?? 1;

@@ -1,0 +1,168 @@
+import { useState, useEffect, useCallback, useMemo } from "react";
+import {
+  traerGastos, traerSaldos, cargarGasto, borrarGasto,
+  saldarCuentas, sincronizarCola, cantidadEnCola, escucharCambios, rubroDe,
+} from "../../lib/gastos";
+import { plata, fechaCorta } from "../../lib/formato";
+import NuevoGasto from "../NuevoGasto";
+
+export default function Gastos({ contexto }) {
+  const { grupo_id, miembros, yo } = contexto;
+
+  const [gastos, setGastos] = useState([]);
+  const [saldos, setSaldos] = useState([]);
+  const [filtro, setFiltro] = useState(null);
+  const [abrirNuevo, setAbrirNuevo] = useState(false);
+  const [enCola, setEnCola] = useState(cantidadEnCola());
+  const [error, setError] = useState("");
+
+  const refrescar = useCallback(async () => {
+    try {
+      const [g, s] = await Promise.all([traerGastos(grupo_id), traerSaldos(grupo_id)]);
+      setGastos(g);
+      setSaldos(s);
+      setError("");
+    } catch {
+      setError("No se pudieron traer los datos. Revisá la conexión.");
+    }
+  }, [grupo_id]);
+
+  useEffect(() => {
+    (async () => {
+      await sincronizarCola().then((r) => setEnCola(r.restantes));
+      await refrescar();
+    })();
+  }, [refrescar]);
+
+  useEffect(() => {
+    const cortar = escucharCambios(grupo_id, refrescar);
+    const alVolver = async () => {
+      const r = await sincronizarCola();
+      setEnCola(r.restantes);
+      refrescar();
+    };
+    window.addEventListener("online", alVolver);
+    return () => { cortar(); window.removeEventListener("online", alVolver); };
+  }, [grupo_id, refrescar]);
+
+  const otro = miembros.find((m) => m.user_id !== yo?.user_id);
+  const miSaldo = Number(saldos.find((s) => s.user_id === yo?.user_id)?.saldo || 0);
+
+  const visibles = useMemo(
+    () => (filtro ? gastos.filter((g) => g.rubro === filtro) : gastos),
+    [gastos, filtro]
+  );
+
+  const porDia = useMemo(() => {
+    const mapa = new Map();
+    visibles.forEach((g) => {
+      if (!mapa.has(g.fecha)) mapa.set(g.fecha, []);
+      mapa.get(g.fecha).push(g);
+    });
+    return [...mapa.entries()];
+  }, [visibles]);
+
+  const alias = (id) => miembros.find((m) => m.user_id === id)?.alias || "?";
+
+  const guardarGasto = async (g) => {
+    const { fila, pendiente } = await cargarGasto(g);
+    setGastos((prev) => [fila, ...prev]);
+    setEnCola(cantidadEnCola());
+    if (!pendiente) refrescar();
+  };
+
+  const eliminar = async (id) => {
+    if (!confirm("¿Borrar este gasto?")) return;
+    setGastos((prev) => prev.filter((g) => g.id !== id));
+    try { await borrarGasto(id); refrescar(); }
+    catch { setError("No se pudo borrar."); }
+  };
+
+  const saldar = async () => {
+    if (miSaldo === 0) return;
+    const monto = Math.abs(miSaldo);
+    const debo = miSaldo < 0;
+    if (!confirm(debo ? `¿Registrar que le pagaste ${plata(monto)} a ${otro.alias}?`
+                      : `¿Registrar que ${otro.alias} te pagó ${plata(monto)}?`)) return;
+    try {
+      await saldarCuentas({
+        grupo_id,
+        de_id: debo ? yo.user_id : otro.user_id,
+        a_id: debo ? otro.user_id : yo.user_id,
+        monto,
+      });
+      refrescar();
+    } catch { setError("No se pudo registrar el pago."); }
+  };
+
+  const debo = miSaldo < 0;
+  const empate = Math.abs(miSaldo) < 0.01;
+
+  return (
+    <div className="tab-gastos">
+      <header className={`balance ${empate ? "cero" : debo ? "debo" : "favor"}`}>
+        <p className="balance-lbl">
+          {empate ? "Están a mano" : debo ? `Le debés a ${otro?.alias}` : `${otro?.alias} te debe`}
+        </p>
+        {!empate && (
+          <p className="balance-n">
+            <span className="signo">$</span>{plata(miSaldo)}
+          </p>
+        )}
+        {!empate && <button className="saldar" onClick={saldar}>Saldar cuentas</button>}
+        {enCola > 0 && <p className="cola">{enCola} sin sincronizar</p>}
+      </header>
+
+      <nav className="filtros">
+        <button className={`f ${!filtro ? "on" : ""}`} onClick={() => setFiltro(null)}>Todo</button>
+        {[...new Set(gastos.map((g) => g.rubro))].map((r) => {
+          const info = rubroDe(r);
+          return (
+            <button key={r} className={`f ${filtro === r ? "on" : ""}`}
+              style={filtro === r ? { background: info.color, borderColor: info.color, color: "#fff" } : {}}
+              onClick={() => setFiltro(filtro === r ? null : r)}>
+              {info.nombre}
+            </button>
+          );
+        })}
+      </nav>
+
+      {error && <p className="error banda">{error}</p>}
+
+      <main className="lista">
+        {porDia.length === 0 && <p className="vacio">Todavía no hay gastos. Tocá el + para cargar el primero.</p>}
+        {porDia.map(([fecha, items]) => (
+          <section key={fecha}>
+            <h2 className="dia">{fechaCorta(fecha)}</h2>
+            {items.map((g) => {
+              const info = rubroDe(g.rubro);
+              const mio = g.pagador_id === yo.user_id;
+              return (
+                <article key={g.id} className={`gasto ${g.pendiente ? "pend" : ""}`}
+                  onDoubleClick={() => eliminar(g.id)}>
+                  <span className="punto" style={{ background: info.color }} />
+                  <div className="gasto-txt">
+                    <p className="gasto-d">{g.descripcion}</p>
+                    <p className="gasto-m">
+                      {mio ? "Pagaste vos" : `Pagó ${alias(g.pagador_id)}`}
+                      {g.split === "propio" && " · no se divide"}
+                      {g.moneda !== "NZD" && ` · ${g.monto} ${g.moneda}`}
+                      {g.pendiente && " · sin sincronizar"}
+                    </p>
+                  </div>
+                  <span className="gasto-n">{plata(g.monto_base)}</span>
+                </article>
+              );
+            })}
+          </section>
+        ))}
+      </main>
+
+      <button className="fab" onClick={() => setAbrirNuevo(true)} aria-label="Cargar gasto">+</button>
+
+      {abrirNuevo && (
+        <NuevoGasto contexto={contexto} onGuardar={guardarGasto} onCerrar={() => setAbrirNuevo(false)} />
+      )}
+    </div>
+  );
+}

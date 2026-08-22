@@ -1,0 +1,126 @@
+import { useState } from "react";
+import { RUBROS, tasaDe } from "../lib/gastos";
+
+/* Carga en tres toques: monto, rubro, quién pagó. Lo demás está detrás de
+   "más opciones". */
+
+export default function NuevoGasto({ contexto, onGuardar, onCerrar }) {
+  const { grupo_id, miembros, yo } = contexto;
+  const [monto, setMonto] = useState("");
+  const [rubro, setRubro] = useState("comida");
+  const [pagador, setPagador] = useState(yo.user_id);
+  const [descripcion, setDescripcion] = useState("");
+  const [split, setSplit] = useState("mitad");
+  const [montoExacto, setMontoExacto] = useState("");
+  const [moneda, setMoneda] = useState("NZD");
+  const [tc, setTc] = useState("1");
+  const [fecha, setFecha] = useState(new Date().toISOString().slice(0, 10));
+  const [mas, setMas] = useState(false);
+  const [guardando, setGuardando] = useState(false);
+
+  const valido = Number(monto) > 0;
+
+  const guardar = async () => {
+    if (!valido || guardando) return;
+    setGuardando(true);
+    await onGuardar({
+      grupo_id,
+      fecha,
+      descripcion: descripcion.trim() || RUBROS.find((r) => r.id === rubro).nombre,
+      rubro,
+      monto: Number(monto),
+      moneda,
+      tc_a_base: Number(tc) || 1,
+      pagador_id: pagador,
+      split,
+      monto_exacto: split === "exacto" ? Number(montoExacto) || 0 : null,
+    });
+    setGuardando(false);
+    onCerrar();
+  };
+
+  return (
+    <div className="sheet-fondo" onClick={onCerrar}>
+      <div className="sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="sheet-asa" />
+
+        <div className="campo-monto">
+          <span className="signo">{moneda === "NZD" ? "$" : moneda}</span>
+          <input type="number" inputMode="decimal" step="0.01" autoFocus
+            value={monto} onChange={(e) => setMonto(e.target.value)} placeholder="0" />
+        </div>
+
+        <div className="rubros">
+          {RUBROS.map((r) => (
+            <button key={r.id}
+              className={`rubro ${rubro === r.id ? "on" : ""}`}
+              style={rubro === r.id ? { background: r.color, borderColor: r.color } : {}}
+              onClick={() => setRubro(r.id)}>
+              {r.nombre}
+            </button>
+          ))}
+        </div>
+
+        <div className="quien">
+          <span className="etiqueta">Pagó</span>
+          <div className="quien-btns">
+            {miembros.map((m) => (
+              <button key={m.user_id}
+                className={`quien-b ${pagador === m.user_id ? "on" : ""}`}
+                onClick={() => setPagador(m.user_id)}>
+                {m.alias}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <input className="desc" value={descripcion} onChange={(e) => setDescripcion(e.target.value)}
+          placeholder="Descripción (opcional)" />
+
+        {mas && (
+          <div className="extra">
+            <label>Cómo se divide</label>
+            <div className="quien-btns">
+              {[["mitad", "Mitad"], ["propio", "Es de quien pagó"], ["exacto", "Monto exacto"]].map(([k, l]) => (
+                <button key={k} className={`quien-b ${split === k ? "on" : ""}`} onClick={() => setSplit(k)}>{l}</button>
+              ))}
+            </div>
+            {split === "exacto" && (
+              <>
+                <label>Le toca al otro</label>
+                <input type="number" inputMode="decimal" value={montoExacto}
+                  onChange={(e) => setMontoExacto(e.target.value)} placeholder="0.00" />
+              </>
+            )}
+
+            <label>Moneda</label>
+            <div className="quien-btns">
+              {["NZD", "USD", "AUD", "ARS"].map((m) => (
+                <button key={m} className={`quien-b ${moneda === m ? "on" : ""}`}
+                  onClick={() => { setMoneda(m); setTc(String(tasaDe(m))); }}>{m}</button>
+              ))}
+            </div>
+            {moneda !== "NZD" && (
+              <>
+                <label>1 {moneda} = ? NZD</label>
+                <input type="number" inputMode="decimal" step="0.000001" value={tc}
+                  onChange={(e) => setTc(e.target.value)} placeholder="0.00" />
+              </>
+            )}
+
+            <label>Fecha</label>
+            <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
+          </div>
+        )}
+
+        <button className="link mas" onClick={() => setMas(!mas)}>
+          {mas ? "Menos opciones" : "Más opciones"}
+        </button>
+
+        <button className="btn" onClick={guardar} disabled={!valido || guardando}>
+          {guardando ? "Guardando…" : "Guardar gasto"}
+        </button>
+      </div>
+    </div>
+  );
+}
