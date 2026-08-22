@@ -3,16 +3,16 @@ import { supabase } from "./lib/supabase";
 import { traerContexto } from "./lib/gastos";
 import Login from "./components/Login";
 import TabBar from "./components/TabBar";
+import Hoy from "./components/tabs/Hoy";
 import Gastos from "./components/tabs/Gastos";
 import Planning from "./components/tabs/Planning";
-import Calendario from "./components/tabs/Calendario";
 import Resumen from "./components/tabs/Resumen";
 import "./styles.css";
 
 export default function App() {
   const [sesion, setSesion] = useState(undefined);
   const [ctx, setCtx] = useState(null);
-  const [tab, setTab] = useState("planning");
+  const [tab, setTab] = useState("hoy");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -49,8 +49,8 @@ export default function App() {
 
   return (
     <div className="app">
-      {tab === "planning" && <Planning contexto={ctx} />}
-      {tab === "calendario" && <Calendario contexto={ctx} />}
+      {tab === "hoy" && <Hoy contexto={ctx} onIrA={setTab} />}
+      {tab === "plan" && <Planning contexto={ctx} />}
       {tab === "gastos" && <Gastos contexto={ctx} />}
       {tab === "resumen" && <Resumen contexto={ctx} />}
       <TabBar tab={tab} onCambiar={setTab} />

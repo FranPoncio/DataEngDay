@@ -94,6 +94,13 @@ export async function cargarGasto(gasto) {
   }
 }
 
+export async function actualizarGasto(id, cambios) {
+  const { data, error } = await supabase
+    .from("gastos").update(cambios).eq("id", id).select().single();
+  if (error) throw error;
+  return data;
+}
+
 export async function borrarGasto(id) {
   if (String(id).startsWith("tmp-")) {
     guardarCola(leerCola().filter((g) => g.id !== id));
@@ -152,15 +159,18 @@ export function escucharCambios(grupo_id, alCambiar) {
 
 /* ----------------------------------------------------------------- rubros */
 
+/* Orden y valores validados con el script de accesibilidad del skill dataviz:
+   pasan banda de luminosidad, chroma, separación para daltonismo y contraste.
+   Si se reordenan o se cambia un color hay que volver a validarlos. */
 export const RUBROS = [
-  { id: "casa", nombre: "Casa", color: "#31866F" },
-  { id: "comida", nombre: "Comida", color: "#C08A33" },
-  { id: "salidas", nombre: "Salidas", color: "#E9663B" },
-  { id: "estudio", nombre: "Estudio", color: "#5B7DB1" },
-  { id: "tramites", nombre: "Trámites", color: "#8B6BA8" },
-  { id: "setup", nombre: "Setup", color: "#B15B7D" },
-  { id: "transporte", nombre: "Transporte", color: "#4A8CA8" },
-  { id: "otros", nombre: "Otros", color: "#7A8B80" },
+  { id: "casa", nombre: "Casa", color: "#00997F" },
+  { id: "comida", nombre: "Comida", color: "#C43D4B" },
+  { id: "estudio", nombre: "Estudio", color: "#2D62C4" },
+  { id: "tramites", nombre: "Trámites", color: "#A87200" },
+  { id: "salidas", nombre: "Salidas", color: "#8B3FBF" },
+  { id: "transporte", nombre: "Transporte", color: "#0092B0" },
+  { id: "setup", nombre: "Setup", color: "#C2186B" },
+  { id: "otros", nombre: "Otros", color: "#5E7A18" },
 ];
 
 export const rubroDe = (id) => RUBROS.find((r) => r.id === id) || RUBROS[RUBROS.length - 1];

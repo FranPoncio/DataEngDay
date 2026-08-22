@@ -1,0 +1,17 @@
+{
+  "name": "Day by Day",
+  "short_name": "Day by Day",
+  "description": "Gastos compartidos y planning de la mudanza a Nueva Zelanda",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#17191D",
+  "background_color": "#EFF0F2",
+  "lang": "es-AR",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

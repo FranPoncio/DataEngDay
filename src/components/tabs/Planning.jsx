@@ -1,18 +1,27 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   traerGrupo, setFechaLlegada, traerTareas, sembrarSiHaceFalta,
-  agregarTarea, actualizarTarea, borrarTarea, escucharPlan, ESTADOS,
+  agregarTarea, actualizarTarea, borrarTarea, escucharPlan, porCercania, ESTADOS,
 } from "../../lib/tareas";
 import NuevaTarea from "../NuevaTarea";
 import TarjetaTarea from "../TarjetaTarea";
+import Calendario from "./Calendario";
+
+const sinAcentos = (s) =>
+  (s || "").normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
 
 export default function Planning({ contexto }) {
   const { grupo_id } = contexto;
   const [grupo, setGrupo] = useState(null);
   const [fechaForm, setFechaForm] = useState("");
   const [tareas, setTareas] = useState([]);
+  const [vista, setVista] = useState("tablero"); // tablero | calendario
+  const [busqueda, setBusqueda] = useState("");
   const [abrirNueva, setAbrirNueva] = useState(false);
+  const [desplegado, setDesplegado] = useState({});
   const [error, setError] = useState("");
+
+  const alternar = (id) => setDesplegado((prev) => ({ ...prev, [id]: !prev[id] }));
 
   const iniciar = useCallback(async () => {
     try {
@@ -23,8 +32,8 @@ export default function Planning({ contexto }) {
         setTareas(await traerTareas(grupo_id));
       }
       setError("");
-    } catch {
-      setError("No se pudo cargar el plan.");
+    } catch (e) {
+      setError(`No se pudo cargar el plan: ${e.message}`);
     }
   }, [grupo_id]);
 
@@ -42,29 +51,49 @@ export default function Planning({ contexto }) {
     try {
       await setFechaLlegada(grupo_id, fechaForm);
       await iniciar();
-    } catch { setError("No se pudo guardar la fecha."); }
+    } catch (e) { setError(`No se pudo guardar la fecha: ${e.message}`); }
   };
 
   const guardarTarea = async (t) => {
-    const fila = await agregarTarea(t);
-    setTareas((prev) => [...prev, fila]);
+    try {
+      const fila = await agregarTarea(t);
+      setTareas((prev) => [...prev, fila]);
+    } catch (e) { setError(`No se pudo crear la tarea: ${e.message}`); }
   };
 
   const cambiarEstado = async (id, estado) => {
     const anterior = tareas;
     setTareas((prev) => prev.map((t) => (t.id === id ? { ...t, estado } : t)));
     try { await actualizarTarea(id, { estado }); }
-    catch { setTareas(anterior); setError("No se pudo actualizar el estado."); }
+    catch (e) { setTareas(anterior); setError(`No se pudo actualizar: ${e.message}`); }
   };
 
   const eliminar = async (id) => {
     if (!confirm("¿Borrar esta tarea?")) return;
+    const anterior = tareas;
     setTareas((prev) => prev.filter((t) => t.id !== id));
     try { await borrarTarea(id); }
-    catch { setError("No se pudo borrar."); }
+    catch (e) { setTareas(anterior); setError(`No se pudo borrar: ${e.message}`); }
   };
 
-  if (!grupo) return <div className="cargando">Cargando…</div>;
+  const filtradas = useMemo(() => {
+    const q = sinAcentos(busqueda.trim());
+    if (!q) return tareas;
+    return tareas.filter(
+      (t) => sinAcentos(t.titulo).includes(q) || sinAcentos(t.detalle).includes(q)
+    );
+  }, [tareas, busqueda]);
+
+  if (!grupo) {
+    return (
+      <div className="cargando">
+        {error ? <span className="error">{error}</span> : "Cargando…"}
+        {error && (
+          <p><button className="link" onClick={() => iniciar()}>Reintentar</button></p>
+        )}
+      </div>
+    );
+  }
 
   if (!grupo.fecha_llegada) {
     return (
@@ -82,23 +111,70 @@ export default function Planning({ contexto }) {
 
   return (
     <div className="tab-planning">
+      <div className="periodo">
+        {[["tablero", "Tablero"], ["calendario", "Calendario"]].map(([k, l]) => (
+          <button key={k} className={`periodo-b ${vista === k ? "on" : ""}`} onClick={() => setVista(k)}>{l}</button>
+        ))}
+      </div>
+
       {error && <p className="error banda">{error}</p>}
 
-      <main className="kanban">
-        {ESTADOS.map((e) => {
-          const items = tareas.filter((t) => t.estado === e.id);
-          return (
-            <section key={e.id} className="swimlane">
-              <h2 className="dia">{e.nombre} ({items.length})</h2>
-              {items.length === 0 && <p className="vacio chico">Nada acá.</p>}
-              {items.map((t) => (
-                <TarjetaTarea key={t.id} tarea={t}
-                  onCambiarEstado={cambiarEstado} onBorrar={eliminar} />
-              ))}
-            </section>
-          );
-        })}
-      </main>
+      {vista === "calendario" ? (
+        <Calendario tareas={tareas} onCambiarEstado={cambiarEstado} onBorrar={eliminar} />
+      ) : (
+        <>
+          <div className="buscador">
+            <input type="search" value={busqueda} onChange={(e) => setBusqueda(e.target.value)}
+              placeholder="Buscar tarea…" />
+          </div>
+
+          <main className="kanban">
+            {ESTADOS.map((e) => {
+              const items = filtradas.filter((t) => t.estado === e.id);
+              const grupos = e.id === "pendiente" && !busqueda
+                ? porCercania(items)
+                : [{ id: e.id, items, plegable: e.id === "realizada" && !busqueda }];
+              return (
+                <section key={e.id} className="swimlane">
+                  <h2 className="dia">{e.nombre} ({items.length})</h2>
+                  {items.length === 0 && <p className="vacio chico">Nada acá.</p>}
+                  {grupos.map((g) => {
+                    if (g.items.length === 0) return null;
+                    const abierto = g.plegable ? !!desplegado[g.id] : true;
+                    return (
+                      <div key={g.id} className="bloque">
+                        {g.titulo && (
+                          g.plegable ? (
+                            <button className="bloque-cab" onClick={() => alternar(g.id)}>
+                              <span>{abierto ? "▾" : "▸"} {g.titulo}</span>
+                              <span className="bloque-n">{g.items.length}</span>
+                            </button>
+                          ) : (
+                            <p className="bloque-cab estatico">
+                              <span>{g.titulo}</span>
+                              <span className="bloque-n">{g.items.length}</span>
+                            </p>
+                          )
+                        )}
+                        {!g.titulo && g.plegable && (
+                          <button className="bloque-cab" onClick={() => alternar(g.id)}>
+                            <span>{abierto ? "▾ Ocultar" : "▸ Ver todas"}</span>
+                            <span className="bloque-n">{g.items.length}</span>
+                          </button>
+                        )}
+                        {abierto && g.items.map((t) => (
+                          <TarjetaTarea key={t.id} tarea={t}
+                            onCambiarEstado={cambiarEstado} onBorrar={eliminar} />
+                        ))}
+                      </div>
+                    );
+                  })}
+                </section>
+              );
+            })}
+          </main>
+        </>
+      )}
 
       <button className="fab" onClick={() => setAbrirNueva(true)} aria-label="Nueva tarea">+</button>
 

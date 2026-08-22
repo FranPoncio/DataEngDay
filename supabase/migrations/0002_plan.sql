@@ -39,7 +39,7 @@ create table if not exists plan_tareas (
   fecha      date,
   origen     text not null default 'usuario' check (origen in ('base', 'usuario')),
   estado     text not null default 'pendiente'
-             check (estado in ('pendiente', 'faltante', 'realizada')),
+             check (estado in ('pendiente', 'haciendo', 'realizada')),
   creado     timestamptz not null default now()
 );
 

@@ -1,5 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { traerTareas, actualizarTarea, borrarTarea, escucharPlan } from "../../lib/tareas";
+import { useState, useMemo } from "react";
 import { MESES_LARGO } from "../../lib/formato";
 import TarjetaTarea from "../TarjetaTarea";
 
@@ -12,28 +11,13 @@ function diasDelMes(anio, mes) {
   return [...Array(offset).fill(null), ...Array.from({ length: ultimoDia }, (_, i) => i + 1)];
 }
 
-export default function Calendario({ contexto }) {
-  const { grupo_id } = contexto;
-  const hoy = new Date();
-  const [anio, setAnio] = useState(hoy.getFullYear());
-  const [mes, setMes] = useState(hoy.getMonth());
-  const [tareas, setTareas] = useState([]);
-  const [diaSel, setDiaSel] = useState(fechaISO(hoy.getFullYear(), hoy.getMonth(), hoy.getDate()));
-  const [error, setError] = useState("");
-
-  const refrescar = useCallback(async () => {
-    try { setTareas(await traerTareas(grupo_id)); setError(""); }
-    catch { setError("No se pudieron traer las tareas."); }
-  }, [grupo_id]);
-
-  useEffect(() => {
-    (async () => { await refrescar(); })();
-  }, [refrescar]);
-
-  useEffect(() => {
-    const cortar = escucharPlan(grupo_id, refrescar);
-    return cortar;
-  }, [grupo_id, refrescar]);
+export default function Calendario({ tareas, onCambiarEstado, onBorrar }) {
+  const hoyISO = useMemo(() => {
+    const n = new Date();
+    return fechaISO(n.getFullYear(), n.getMonth(), n.getDate());
+  }, []);
+  const [navegado, setNavegado] = useState(null);
+  const [diaTocado, setDiaTocado] = useState(null);
 
   const porFecha = useMemo(() => {
     const mapa = new Map();
@@ -45,29 +29,30 @@ export default function Calendario({ contexto }) {
     return mapa;
   }, [tareas]);
 
+  /* Las tareas sembradas caen en meses lejanos al actual: mientras no
+     navegues a mano, mostramos el mes de hoy solo si tiene tareas, y si no
+     el de la primera tarea con fecha. */
+  const inicial = useMemo(() => {
+    const mesDeHoy = hoyISO.slice(0, 7);
+    if (porFecha.size === 0 || [...porFecha.keys()].some((f) => f.startsWith(mesDeHoy))) {
+      return { fecha: hoyISO, esHoy: true };
+    }
+    return { fecha: [...porFecha.keys()].sort()[0], esHoy: false };
+  }, [porFecha, hoyISO]);
+
+  const [anio, mes] = navegado
+    ? [navegado.anio, navegado.mes]
+    : [Number(inicial.fecha.slice(0, 4)), Number(inicial.fecha.slice(5, 7)) - 1];
+  const diaSel = diaTocado ?? inicial.fecha;
+
   const cambiarMes = (delta) => {
     let m = mes + delta, a = anio;
     if (m < 0) { m = 11; a -= 1; }
     if (m > 11) { m = 0; a += 1; }
-    setMes(m); setAnio(a);
+    setNavegado({ anio: a, mes: m });
   };
 
-  const cambiarEstado = async (id, estado) => {
-    const anterior = tareas;
-    setTareas((prev) => prev.map((t) => (t.id === id ? { ...t, estado } : t)));
-    try { await actualizarTarea(id, { estado }); }
-    catch { setTareas(anterior); setError("No se pudo actualizar el estado."); }
-  };
-
-  const eliminar = async (id) => {
-    if (!confirm("¿Borrar esta tarea?")) return;
-    setTareas((prev) => prev.filter((t) => t.id !== id));
-    try { await borrarTarea(id); }
-    catch { setError("No se pudo borrar."); }
-  };
-
-  const hoyISO = fechaISO(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
-  const items = diaSel ? (porFecha.get(diaSel) || []) : [];
+  const items = porFecha.get(diaSel) || [];
 
   return (
     <div className="tab-calendario">
@@ -76,8 +61,6 @@ export default function Calendario({ contexto }) {
         <span>{MESES_LARGO[mes]} {anio}</span>
         <button className="link" onClick={() => cambiarMes(1)}>›</button>
       </nav>
-
-      {error && <p className="error banda">{error}</p>}
 
       <div className="cal-grid">
         {["L", "M", "M", "J", "V", "S", "D"].map((d, i) => (
@@ -91,7 +74,7 @@ export default function Calendario({ contexto }) {
           return (
             <button key={i}
               className={`cal-dia ${fecha === hoyISO ? "hoy" : ""} ${fecha === diaSel ? "sel" : ""}`}
-              onClick={() => setDiaSel(fecha)}>
+              onClick={() => setDiaTocado(fecha)}>
               <span>{dia}</span>
               <span className="cal-puntos">
                 {estados.map((e) => <span key={e} className={`cal-punto ${e}`} />)}
@@ -102,11 +85,10 @@ export default function Calendario({ contexto }) {
       </div>
 
       <section className="agenda">
-        {!diaSel && <p className="vacio">Tocá un día para ver sus tareas.</p>}
-        {diaSel && items.length === 0 && <p className="vacio">Sin tareas ese día.</p>}
+        {items.length === 0 && <p className="vacio">Sin tareas ese día.</p>}
         {items.map((t) => (
           <TarjetaTarea key={t.id} tarea={t}
-            onCambiarEstado={cambiarEstado} onBorrar={eliminar} />
+            onCambiarEstado={onCambiarEstado} onBorrar={onBorrar} />
         ))}
       </section>
     </div>

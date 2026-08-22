@@ -2,19 +2,20 @@ import { useState } from "react";
 import { RUBROS, tasaDe } from "../lib/gastos";
 
 /* Carga en tres toques: monto, rubro, quién pagó. Lo demás está detrás de
-   "más opciones". */
+   "más opciones". Si recibe `gasto`, edita ese en vez de crear uno nuevo. */
 
-export default function NuevoGasto({ contexto, onGuardar, onCerrar }) {
+export default function NuevoGasto({ contexto, gasto, onGuardar, onBorrar, onCerrar }) {
   const { grupo_id, miembros, yo } = contexto;
-  const [monto, setMonto] = useState("");
-  const [rubro, setRubro] = useState("comida");
-  const [pagador, setPagador] = useState(yo.user_id);
-  const [descripcion, setDescripcion] = useState("");
-  const [split, setSplit] = useState("mitad");
-  const [montoExacto, setMontoExacto] = useState("");
-  const [moneda, setMoneda] = useState("NZD");
-  const [tc, setTc] = useState("1");
-  const [fecha, setFecha] = useState(new Date().toISOString().slice(0, 10));
+  const edicion = !!gasto;
+  const [monto, setMonto] = useState(gasto ? String(gasto.monto) : "");
+  const [rubro, setRubro] = useState(gasto?.rubro || "comida");
+  const [pagador, setPagador] = useState(gasto?.pagador_id || yo.user_id);
+  const [descripcion, setDescripcion] = useState(gasto?.descripcion || "");
+  const [split, setSplit] = useState(gasto?.split || "mitad");
+  const [montoExacto, setMontoExacto] = useState(gasto?.monto_exacto != null ? String(gasto.monto_exacto) : "");
+  const [moneda, setMoneda] = useState(gasto?.moneda || "NZD");
+  const [tc, setTc] = useState(gasto ? String(gasto.tc_a_base ?? 1) : "1");
+  const [fecha, setFecha] = useState(gasto?.fecha || new Date().toISOString().slice(0, 10));
   const [mas, setMas] = useState(false);
   const [guardando, setGuardando] = useState(false);
 
@@ -36,6 +37,13 @@ export default function NuevoGasto({ contexto, onGuardar, onCerrar }) {
       monto_exacto: split === "exacto" ? Number(montoExacto) || 0 : null,
     });
     setGuardando(false);
+    onCerrar();
+  };
+
+  const borrar = async () => {
+    if (!confirm("¿Borrar este gasto?")) return;
+    setGuardando(true);
+    await onBorrar(gasto.id);
     onCerrar();
   };
 
@@ -118,8 +126,14 @@ export default function NuevoGasto({ contexto, onGuardar, onCerrar }) {
         </button>
 
         <button className="btn" onClick={guardar} disabled={!valido || guardando}>
-          {guardando ? "Guardando…" : "Guardar gasto"}
+          {guardando ? "Guardando…" : edicion ? "Guardar cambios" : "Guardar gasto"}
         </button>
+
+        {edicion && (
+          <button className="link borrar centrado" onClick={borrar} disabled={guardando}>
+            Borrar gasto
+          </button>
+        )}
       </div>
     </div>
   );

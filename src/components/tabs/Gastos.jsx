@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
-  traerGastos, traerSaldos, cargarGasto, borrarGasto,
+  traerGastos, traerSaldos, cargarGasto, borrarGasto, actualizarGasto,
   saldarCuentas, sincronizarCola, cantidadEnCola, escucharCambios, rubroDe,
 } from "../../lib/gastos";
 import { plata, fechaCorta } from "../../lib/formato";
@@ -13,6 +13,7 @@ export default function Gastos({ contexto }) {
   const [saldos, setSaldos] = useState([]);
   const [filtro, setFiltro] = useState(null);
   const [abrirNuevo, setAbrirNuevo] = useState(false);
+  const [editando, setEditando] = useState(null);
   const [enCola, setEnCola] = useState(cantidadEnCola());
   const [error, setError] = useState("");
 
@@ -72,10 +73,18 @@ export default function Gastos({ contexto }) {
   };
 
   const eliminar = async (id) => {
-    if (!confirm("¿Borrar este gasto?")) return;
+    const anterior = gastos;
     setGastos((prev) => prev.filter((g) => g.id !== id));
     try { await borrarGasto(id); refrescar(); }
-    catch { setError("No se pudo borrar."); }
+    catch (e) { setGastos(anterior); setError(`No se pudo borrar: ${e.message}`); }
+  };
+
+  const editar = async (cambios) => {
+    const id = editando.id;
+    const anterior = gastos;
+    setGastos((prev) => prev.map((g) => (g.id === id ? { ...g, ...cambios } : g)));
+    try { await actualizarGasto(id, cambios); refrescar(); }
+    catch (e) { setGastos(anterior); setError(`No se pudo guardar: ${e.message}`); }
   };
 
   const saldar = async () => {
@@ -139,7 +148,7 @@ export default function Gastos({ contexto }) {
               const mio = g.pagador_id === yo.user_id;
               return (
                 <article key={g.id} className={`gasto ${g.pendiente ? "pend" : ""}`}
-                  onDoubleClick={() => eliminar(g.id)}>
+                  onClick={() => !g.pendiente && setEditando(g)}>
                   <span className="punto" style={{ background: info.color }} />
                   <div className="gasto-txt">
                     <p className="gasto-d">{g.descripcion}</p>
@@ -162,6 +171,11 @@ export default function Gastos({ contexto }) {
 
       {abrirNuevo && (
         <NuevoGasto contexto={contexto} onGuardar={guardarGasto} onCerrar={() => setAbrirNuevo(false)} />
+      )}
+
+      {editando && (
+        <NuevoGasto contexto={contexto} gasto={editando}
+          onGuardar={editar} onBorrar={eliminar} onCerrar={() => setEditando(null)} />
       )}
     </div>
   );

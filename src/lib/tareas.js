@@ -15,9 +15,29 @@ export const faseDe = (id) => FASES.find((f) => f.id === id) || FASES[FASES.leng
 
 export const ESTADOS = [
   { id: "pendiente", nombre: "Pendiente" },
-  { id: "faltante", nombre: "Faltante" },
+  { id: "haciendo", nombre: "Haciendo" },
   { id: "realizada", nombre: "Realizada" },
 ];
+
+/* Con 30+ pendientes, una lista plana cansa: se separan las urgentes del resto.
+   La usan Planning (columna Pendiente) y Hoy. */
+export function porCercania(items) {
+  const n = new Date();
+  const base = new Date(n.getFullYear(), n.getMonth(), n.getDate());
+  const hoyISO = toISO(base);
+  const finISO = toISO(sumarDias(base, 7));
+
+  return [
+    { id: "atrasadas", titulo: "Atrasadas", plegable: false,
+      items: items.filter((t) => t.fecha && t.fecha < hoyISO) },
+    { id: "semana", titulo: "Esta semana", plegable: false,
+      items: items.filter((t) => t.fecha && t.fecha >= hoyISO && t.fecha <= finISO) },
+    { id: "despues", titulo: "Más adelante", plegable: true,
+      items: items.filter((t) => t.fecha && t.fecha > finISO) },
+    { id: "sinfecha", titulo: "Sin fecha", plegable: true,
+      items: items.filter((t) => !t.fecha) },
+  ];
+}
 
 export const PRIORIDADES = [
   { id: 1, nombre: "Alta" },

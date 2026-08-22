@@ -1,55 +1,52 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { supabase } from "../../lib/supabase";
 import { traerGastos, traerSaldos, rubroDe } from "../../lib/gastos";
 import { plata, MESES_LARGO, rangoMes } from "../../lib/formato";
-
-const GAP_DEG = 1.5;
-
-function polarACartesiano(cx, cy, r, anguloDeg) {
-  const rad = ((anguloDeg - 90) * Math.PI) / 180;
-  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
-}
-
-function trozoTorta(cx, cy, r, desde, hasta) {
-  const inicio = polarACartesiano(cx, cy, r, hasta);
-  const fin = polarACartesiano(cx, cy, r, desde);
-  const arcoGrande = hasta - desde <= 180 ? 0 : 1;
-  return `M ${cx} ${cy} L ${inicio.x} ${inicio.y} A ${r} ${r} 0 ${arcoGrande} 0 ${fin.x} ${fin.y} Z`;
-}
 
 export default function Resumen({ contexto }) {
   const { grupo_id, miembros } = contexto;
   const hoy = new Date();
   const [anio, setAnio] = useState(hoy.getFullYear());
   const [mes, setMes] = useState(hoy.getMonth());
+  const [modo, setModo] = useState("mes"); // mes | anio | todo
   const [gastos, setGastos] = useState([]);
   const [saldos, setSaldos] = useState([]);
   const [error, setError] = useState("");
 
   const refrescar = useCallback(async () => {
     try {
-      const { desde, hasta } = rangoMes(anio, mes);
+      const rango =
+        modo === "mes" ? rangoMes(anio, mes)
+        : modo === "anio" ? { desde: `${anio}-01-01`, hasta: `${anio}-12-31` }
+        : {};
       const [g, s] = await Promise.all([
-        traerGastos(grupo_id, { desde, hasta }),
+        traerGastos(grupo_id, rango),
         traerSaldos(grupo_id),
       ]);
       setGastos(g);
       setSaldos(s);
       setError("");
-    } catch {
-      setError("No se pudieron traer los datos.");
+    } catch (e) {
+      setError(`No se pudieron traer los datos: ${e.message}`);
     }
-  }, [grupo_id, anio, mes]);
+  }, [grupo_id, anio, mes, modo]);
 
   useEffect(() => {
     (async () => { await refrescar(); })();
   }, [refrescar]);
 
   const cambiarMes = (delta) => {
+    if (modo === "anio") { setAnio(anio + delta); return; }
     let m = mes + delta, a = anio;
     if (m < 0) { m = 11; a -= 1; }
     if (m > 11) { m = 0; a += 1; }
     setMes(m); setAnio(a);
   };
+
+  const etiquetaPeriodo =
+    modo === "mes" ? `${MESES_LARGO[mes]} ${anio}`
+    : modo === "anio" ? `Año ${anio}`
+    : "Todo el historial";
 
   const porRubro = useMemo(() => {
     const mapa = new Map();
@@ -79,22 +76,20 @@ export default function Resumen({ contexto }) {
   const debo = miSaldo < 0;
   const empate = Math.abs(miSaldo) < 0.01;
 
-  const slices = porRubro.reduce((acc, r) => {
-    const ancho = totalGeneral > 0 ? (r.total / totalGeneral) * 360 : 0;
-    const gap = porRubro.length > 1 && ancho > GAP_DEG * 2 ? GAP_DEG / 2 : 0;
-    const desde = acc.pos;
-    const hasta = desde + ancho;
-    acc.pos = hasta;
-    acc.out.push({ ...r, path: trozoTorta(110, 110, 100, desde + gap, hasta - gap) });
-    return acc;
-  }, { pos: 0, out: [] }).out;
+  const maximo = porRubro.length ? porRubro[0].total : 0;
 
   return (
     <div className="tab-resumen">
+      <div className="periodo">
+        {[["mes", "Mes"], ["anio", "Año"], ["todo", "Todo"]].map(([k, l]) => (
+          <button key={k} className={`periodo-b ${modo === k ? "on" : ""}`} onClick={() => setModo(k)}>{l}</button>
+        ))}
+      </div>
+
       <nav className="mes-nav">
-        <button className="link" onClick={() => cambiarMes(-1)}>‹</button>
-        <span>{MESES_LARGO[mes]} {anio}</span>
-        <button className="link" onClick={() => cambiarMes(1)}>›</button>
+        {modo !== "todo" && <button className="link" onClick={() => cambiarMes(-1)}>‹</button>}
+        <span>{etiquetaPeriodo}</span>
+        {modo !== "todo" && <button className="link" onClick={() => cambiarMes(1)}>›</button>}
       </nav>
 
       {error && <p className="error banda">{error}</p>}
@@ -103,22 +98,21 @@ export default function Resumen({ contexto }) {
         <p className="vacio">Sin gastos este período.</p>
       ) : (
         <>
-          <div className="torta-wrap">
-            <svg className="torta" viewBox="0 0 220 220" role="img" aria-label="Gasto por rubro">
-              {slices.map((s) => (
-                <path key={s.rubro} d={s.path} fill={s.info.color} />
-              ))}
-            </svg>
-            <ul className="torta-leyenda">
-              {porRubro.map((r) => (
-                <li key={r.rubro}>
-                  <span className="punto" style={{ background: r.info.color }} />
-                  <span className="torta-nombre">{r.info.nombre}</span>
-                  <span className="torta-pct chico">{((r.total / totalGeneral) * 100).toFixed(0)}%</span>
-                  <span className="torta-monto">{plata(r.total)}</span>
-                </li>
-              ))}
-            </ul>
+          <div className="barras">
+            <p className="barras-tit">Gasto por rubro <span className="chico">· total ${plata(totalGeneral)}</span></p>
+            {porRubro.map((r) => (
+              <div key={r.rubro} className="barra-fila">
+                <span className="barra-nombre">{r.info.nombre}</span>
+                <span className="barra-pista">
+                  <span className="barra" style={{
+                    width: `${maximo > 0 ? (r.total / maximo) * 100 : 0}%`,
+                    background: r.info.color,
+                  }} />
+                </span>
+                <span className="barra-monto">{plata(r.total)}</span>
+                <span className="barra-pct chico">{((r.total / totalGeneral) * 100).toFixed(0)}%</span>
+              </div>
+            ))}
           </div>
 
           <div className="tabla-scroll">
@@ -160,6 +154,11 @@ export default function Resumen({ contexto }) {
         </p>
         {!empate && <p className="saldo-mini-n">${plata(miSaldo)}</p>}
       </section>
+
+      <footer className="pie">
+        <span className="chico">Sesión de {contexto.yo?.alias}</span>
+        <button className="link" onClick={() => supabase.auth.signOut()}>Cerrar sesión</button>
+      </footer>
     </div>
   );
 }
