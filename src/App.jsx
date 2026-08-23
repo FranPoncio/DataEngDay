@@ -17,11 +17,25 @@ export default function App() {
   const [sesion, setSesion] = useState(undefined);
   const [ctx, setCtx] = useState(null);
   const [tab, setTab] = useState(accesoDirectoGasto ? "gastos" : "hoy");
+  const [pedirNuevoGasto, setPedirNuevoGasto] = useState(accesoDirectoGasto);
   const [error, setError] = useState("");
 
   useEffect(() => {
     if (accesoDirectoGasto) window.history.replaceState({}, "", window.location.pathname);
   }, []);
+
+  /* `pedirNuevoGasto` solo tiene que estar prendido en el render donde
+     Gastos se monta con el sheet ya abierto — cualquier otra navegación
+     lo apaga, para no reabrirlo solo si volvés a esa pestaña más tarde. */
+  const cambiarTab = (t) => {
+    if (t !== "gastos") setPedirNuevoGasto(false);
+    setTab(t);
+  };
+
+  const irACargarGasto = () => {
+    setPedirNuevoGasto(true);
+    setTab("gastos");
+  };
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSesion(data.session));
@@ -65,11 +79,11 @@ export default function App() {
 
   return (
     <div className="app">
-      {tab === "hoy" && <Hoy contexto={ctx} onIrA={setTab} />}
+      {tab === "hoy" && <Hoy contexto={ctx} onIrA={cambiarTab} onCargarGasto={irACargarGasto} />}
       {tab === "plan" && <Planning contexto={ctx} />}
-      {tab === "gastos" && <Gastos contexto={ctx} autoAbrir={accesoDirectoGasto} />}
+      {tab === "gastos" && <Gastos contexto={ctx} autoAbrir={pedirNuevoGasto} />}
       {tab === "resumen" && <Resumen contexto={ctx} onRecargarRubros={recargarRubros} />}
-      <TabBar tab={tab} onCambiar={setTab} />
+      <TabBar tab={tab} onCambiar={cambiarTab} />
     </div>
   );
 }

@@ -5,18 +5,19 @@ import {
 import {
   traerGrupo, traerTareas, actualizarTarea, borrarTarea, escucharPlan, porCercania,
 } from "../../lib/tareas";
-import { plata, fechaCorta, hoyISO, rangoMes } from "../../lib/formato";
+import { plata, fechaCorta, hoyISO, rangoMes, hoy, parseISO, difDias } from "../../lib/formato";
 import { useDeshacer } from "../../lib/deshacer";
 import TarjetaTarea from "../TarjetaTarea";
 import Toast from "../Toast";
 import RubroAvatar from "../RubroAvatar";
 
-export default function Hoy({ contexto, onIrA }) {
+export default function Hoy({ contexto, onIrA, onCargarGasto }) {
   const { grupo_id, miembros, yo, rubros } = contexto;
   const [tareas, setTareas] = useState([]);
   const [gastos, setGastos] = useState([]);
   const [saldos, setSaldos] = useState([]);
   const [fijos, setFijos] = useState([]);
+  const [fechaLlegada, setFechaLlegada] = useState(null);
   const [listo, setListo] = useState(false);
   const [error, setError] = useState("");
   const { pendiente, pedir, deshacer } = useDeshacer();
@@ -35,6 +36,7 @@ export default function Hoy({ contexto, onIrA }) {
       setGastos(gs);
       setSaldos(s);
       setFijos(f);
+      setFechaLlegada(g.fecha_llegada);
       setError("");
     } catch (e) {
       setError(`No se pudo cargar: ${e.message}`);
@@ -99,11 +101,15 @@ export default function Hoy({ contexto, onIrA }) {
 
   const sinUrgentes = urgentes.atrasadas.length === 0 && urgentes.semana.length === 0;
 
+  const diasViaje = fechaLlegada ? difDias(parseISO(fechaLlegada), hoy()) : null;
+  const hechas = tareas.filter((t) => t.estado === "realizada").length;
+  const progreso = tareas.length ? Math.round((hechas / tareas.length) * 100) : 0;
+
   return (
     <div className="tab-hoy">
       {error && <p className="error banda">{error}</p>}
 
-      <button className={`saldo-hoy ${empate ? "cero" : debo ? "debo" : "favor"}`}
+      <button className={`saldo-hoy ${empate ? "cero" : debo ? "debo" : "favor"} ${!otro || empate ? "compacto" : ""}`}
         onClick={() => onIrA("gastos")}>
         <span className="saldo-hoy-lbl">
           {!otro ? "Todavía no hay nadie más en el grupo"
@@ -111,6 +117,27 @@ export default function Hoy({ contexto, onIrA }) {
         </span>
         {otro && !empate && <span className="saldo-hoy-n">${plata(miSaldo)}</span>}
       </button>
+
+      {(diasViaje !== null || tareas.length > 0) && (
+        <div className="stats-hoy">
+          {diasViaje !== null && (
+            <div className="stat-mini">
+              <p className="stat-mini-n">{diasViaje > 0 ? diasViaje : diasViaje === 0 ? "¡Hoy!" : Math.abs(diasViaje)}</p>
+              <p className="stat-mini-lbl">
+                {diasViaje > 0 ? "días para viajar" : diasViaje === 0 ? "es el día" : "días viviendo allá"}
+              </p>
+            </div>
+          )}
+          {tareas.length > 0 && (
+            <div className="stat-mini">
+              <p className="stat-mini-n">{progreso}%</p>
+              <p className="stat-mini-lbl">del plan · {hechas}/{tareas.length}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      <button className="accion-rapida" onClick={onCargarGasto}>+ Cargar gasto</button>
 
       {fijos.length > 0 && (
         <div className="aviso-fijos">

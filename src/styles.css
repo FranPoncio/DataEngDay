@@ -62,7 +62,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--marca);outline-
 .gasto-d{margin:0;font-weight:600;font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .gasto-m{margin:2px 0 0;font-size:12px;color:var(--t2);}
 .gasto-n{font-family:var(--datos);font-size:15px;font-weight:500;flex:none;}
-.vacio{text-align:center;color:var(--t2);padding:50px 20px;font-size:14px;}
+.vacio{text-align:center;color:var(--t2);padding:22px 20px;font-size:14px;}
 
 .fab{
   position:fixed;bottom:78px;left:50%;transform:translateX(-50%);
@@ -258,6 +258,21 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--marca);outline-
 .saldo-hoy-n{font-size:32px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;}
 .saldo-hoy.debo .saldo-hoy-n{color:var(--marca-claro);}
 .saldo-hoy.favor .saldo-hoy-n{color:var(--verde-claro);}
+/* Sin número que mostrar, el mensaje es una sola línea corta — no tiene
+   sentido reservarle el mismo alto que a la tarjeta con el monto grande. */
+.saldo-hoy.compacto{padding:12px 16px;}
+
+.stats-hoy{display:flex;gap:8px;margin-bottom:10px;}
+.stat-mini{flex:1;background:var(--alto);border-radius:var(--r-field);padding:10px 12px;text-align:center;}
+.stat-mini-n{margin:0;font-family:var(--display);font-weight:700;font-size:19px;letter-spacing:-.01em;}
+.stat-mini-lbl{margin:1px 0 0;font-size:10.5px;color:var(--t2);}
+
+.accion-rapida{
+  display:block;width:100%;margin-bottom:14px;padding:11px;
+  border:1px dashed var(--linea);border-radius:var(--r-field);
+  background:none;color:var(--marca);font-weight:600;font-size:13.5px;text-align:center;
+}
+.accion-rapida:active{background:rgba(184,69,31,.08);}
 
 .hoy-bloque{margin-bottom:18px;}
 .hoy-tit{margin:0 0 9px;font-size:11.5px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.05em;}
