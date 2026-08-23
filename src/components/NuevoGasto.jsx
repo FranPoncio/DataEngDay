@@ -84,7 +84,8 @@ export default function NuevoGasto({ contexto, gasto, onGuardar, onBorrar, onCer
         <div className="campo-monto">
           <span className="signo">{moneda === "NZD" ? "$" : moneda}</span>
           <input type="number" inputMode="decimal" step="0.01" autoFocus
-            value={monto} onChange={(e) => setMonto(e.target.value)} placeholder="0" />
+            value={monto} onChange={(e) => setMonto(e.target.value)} placeholder="0"
+            onKeyDown={(e) => e.key === "Enter" && guardar()} />
         </div>
 
         <div className="rubros">

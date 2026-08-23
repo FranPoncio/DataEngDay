@@ -9,11 +9,19 @@ import Planning from "./components/tabs/Planning";
 import Resumen from "./components/tabs/Resumen";
 import "./styles.css";
 
+/* Atajo de la PWA ("Cargar gasto" al mantener presionado el ícono, ver
+   manifest.webmanifest): entra directo al formulario, sin pasar por Hoy. */
+const accesoDirectoGasto = new URLSearchParams(window.location.search).get("nuevo") === "gasto";
+
 export default function App() {
   const [sesion, setSesion] = useState(undefined);
   const [ctx, setCtx] = useState(null);
-  const [tab, setTab] = useState("hoy");
+  const [tab, setTab] = useState(accesoDirectoGasto ? "gastos" : "hoy");
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (accesoDirectoGasto) window.history.replaceState({}, "", window.location.pathname);
+  }, []);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSesion(data.session));
@@ -59,7 +67,7 @@ export default function App() {
     <div className="app">
       {tab === "hoy" && <Hoy contexto={ctx} onIrA={setTab} />}
       {tab === "plan" && <Planning contexto={ctx} />}
-      {tab === "gastos" && <Gastos contexto={ctx} />}
+      {tab === "gastos" && <Gastos contexto={ctx} autoAbrir={accesoDirectoGasto} />}
       {tab === "resumen" && <Resumen contexto={ctx} onRecargarRubros={recargarRubros} />}
       <TabBar tab={tab} onCambiar={setTab} />
     </div>

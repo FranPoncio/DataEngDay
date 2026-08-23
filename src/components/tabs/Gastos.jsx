@@ -10,14 +10,14 @@ import NuevoGasto from "../NuevoGasto";
 import Toast from "../Toast";
 import RubroAvatar from "../RubroAvatar";
 
-export default function Gastos({ contexto }) {
+export default function Gastos({ contexto, autoAbrir = false }) {
   const { grupo_id, miembros, yo, rubros } = contexto;
 
   const [gastos, setGastos] = useState([]);
   const [saldos, setSaldos] = useState([]);
   const [filtro, setFiltro] = useState(null);
   const [busqueda, setBusqueda] = useState("");
-  const [abrirNuevo, setAbrirNuevo] = useState(false);
+  const [abrirNuevo, setAbrirNuevo] = useState(autoAbrir);
   const [editando, setEditando] = useState(null);
   const [fijos, setFijos] = useState([]);
   const [enCola, setEnCola] = useState(cantidadEnCola());
