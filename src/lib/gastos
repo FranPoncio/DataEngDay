@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { sinAcentos } from "./formato";
 
 /* La UI nunca espera a la red: el gasto se pinta primero, se manda después,
    y si no hay señal queda en cola hasta que vuelva. */
@@ -23,14 +24,19 @@ export async function traerContexto() {
     .from("miembros")
     .select("grupo_id, user_id, alias, color");
   if (error) throw error;
-  if (!miembros?.length) return { user, grupo_id: null, miembros: [] };
+  if (!miembros?.length) return { user, grupo_id: null, miembros: [], rubros: RUBROS };
 
   const grupo_id = miembros[0].grupo_id;
+  let rubros;
+  try { rubros = await traerRubros(grupo_id); }
+  catch { rubros = []; }
+
   return {
     user,
     grupo_id,
     miembros: miembros.filter((m) => m.grupo_id === grupo_id),
     yo: miembros.find((m) => m.user_id === user.id),
+    rubros: rubros.length ? rubros : RUBROS,
   };
 }
 
@@ -183,6 +189,21 @@ export async function borrarGasto(id) {
   if (error) throw error;
 }
 
+/* ------------------------------------------------------------- recibos */
+
+export async function subirRecibo(grupo_id, gasto_id, archivo) {
+  const path = `${grupo_id}/${gasto_id}-${Date.now()}.jpg`;
+  const { error } = await supabase.storage.from("recibos").upload(path, archivo, { upsert: true });
+  if (error) throw error;
+  return path;
+}
+
+export async function urlRecibo(path) {
+  const { data, error } = await supabase.storage.from("recibos").createSignedUrl(path, 3600);
+  if (error) throw error;
+  return data.signedUrl;
+}
+
 export async function saldarCuentas({ grupo_id, de_id, a_id, monto, moneda = "NZD", tc_a_base = 1 }) {
   const { data, error } = await supabase
     .from("pagos")
@@ -235,6 +256,10 @@ export function escucharCambios(grupo_id, alCambiar) {
 /* Orden y valores validados con el script de accesibilidad del skill dataviz:
    pasan banda de luminosidad, chroma, separación para daltonismo y contraste.
    Si se reordenan o se cambia un color hay que volver a validarlos. */
+/* Lista default: se usa como semilla en la migración 0007 y como respaldo
+   si `rubros` todavía no cargó (o la migración no corrió) — la app nunca
+   se queda sin categorías para mostrar. La lista real y editable por grupo
+   vive en la tabla `rubros` (ver traerRubros más abajo). */
 export const RUBROS = [
   { id: "casa", nombre: "Casa", color: "#00997F" },
   { id: "comida", nombre: "Comida", color: "#C43D4B" },
@@ -246,7 +271,40 @@ export const RUBROS = [
   { id: "otros", nombre: "Otros", color: "#5E7A18" },
 ];
 
-export const rubroDe = (id) => RUBROS.find((r) => r.id === id) || RUBROS[RUBROS.length - 1];
+export const rubroDe = (id, rubros = RUBROS) =>
+  rubros.find((r) => r.id === id) || rubros[rubros.length - 1] || RUBROS[RUBROS.length - 1];
+
+export async function traerRubros(grupo_id) {
+  const { data, error } = await supabase
+    .from("rubros")
+    .select("clave, nombre, color, orden")
+    .eq("grupo_id", grupo_id)
+    .order("orden", { ascending: true });
+  if (error) throw error;
+  return (data || []).map((r) => ({ id: r.clave, nombre: r.nombre, color: r.color }));
+}
+
+const claveDe = (nombre) =>
+  sinAcentos(nombre).replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || `rubro-${Date.now()}`;
+
+export async function crearRubro(grupo_id, { nombre, color, orden = 0 }) {
+  const clave = claveDe(nombre);
+  const { error } = await supabase.from("rubros").insert({ grupo_id, clave, nombre, color, orden });
+  if (error) throw error;
+  return { id: clave, nombre, color };
+}
+
+export async function editarRubro(grupo_id, clave, cambios) {
+  const { error } = await supabase.from("rubros").update(cambios)
+    .eq("grupo_id", grupo_id).eq("clave", clave);
+  if (error) throw error;
+}
+
+export async function borrarRubro(grupo_id, clave) {
+  const { error } = await supabase.from("rubros").delete()
+    .eq("grupo_id", grupo_id).eq("clave", clave);
+  if (error) throw error;
+}
 
 /* ------------------------------------------------------------- monedas */
 

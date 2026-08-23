@@ -1,15 +1,15 @@
 import { useState } from "react";
-import { RUBROS, tasaDe } from "../lib/gastos";
+import { tasaDe, subirRecibo, urlRecibo, actualizarGasto } from "../lib/gastos";
 import { hoyISO } from "../lib/formato";
 
 /* Carga en tres toques: monto, rubro, quién pagó. Lo demás está detrás de
    "más opciones". Si recibe `gasto`, edita ese en vez de crear uno nuevo. */
 
 export default function NuevoGasto({ contexto, gasto, onGuardar, onBorrar, onCerrar }) {
-  const { grupo_id, miembros, yo } = contexto;
+  const { grupo_id, miembros, yo, rubros } = contexto;
   const edicion = !!gasto;
   const [monto, setMonto] = useState(gasto ? String(gasto.monto) : "");
-  const [rubro, setRubro] = useState(gasto?.rubro || "comida");
+  const [rubro, setRubro] = useState(gasto?.rubro || rubros[0]?.id || "otros");
   const [pagador, setPagador] = useState(gasto?.pagador_id || yo.user_id);
   const [descripcion, setDescripcion] = useState(gasto?.descripcion || "");
   const [split, setSplit] = useState(gasto?.split || "mitad");
@@ -20,6 +20,9 @@ export default function NuevoGasto({ contexto, gasto, onGuardar, onBorrar, onCer
   const [recurrente, setRecurrente] = useState(!!gasto?.recurrente);
   const [mas, setMas] = useState(false);
   const [guardando, setGuardando] = useState(false);
+  const [recibo, setRecibo] = useState(gasto?.recibo_path || null);
+  const [subiendoRecibo, setSubiendoRecibo] = useState(false);
+  const [errorRecibo, setErrorRecibo] = useState("");
 
   const valido = Number(monto) > 0;
 
@@ -29,7 +32,7 @@ export default function NuevoGasto({ contexto, gasto, onGuardar, onBorrar, onCer
     await onGuardar({
       grupo_id,
       fecha,
-      descripcion: descripcion.trim() || RUBROS.find((r) => r.id === rubro).nombre,
+      descripcion: descripcion.trim() || rubros.find((r) => r.id === rubro)?.nombre || rubro,
       rubro,
       monto: Number(monto),
       moneda,
@@ -43,11 +46,34 @@ export default function NuevoGasto({ contexto, gasto, onGuardar, onBorrar, onCer
     onCerrar();
   };
 
-  const borrar = async () => {
-    if (!confirm("¿Borrar este gasto?")) return;
-    setGuardando(true);
-    await onBorrar(gasto.id);
+  const borrar = () => {
+    onBorrar(gasto.id);
     onCerrar();
+  };
+
+  const elegirRecibo = async (e) => {
+    const archivo = e.target.files[0];
+    if (!archivo) return;
+    setSubiendoRecibo(true);
+    setErrorRecibo("");
+    try {
+      const path = await subirRecibo(grupo_id, gasto.id, archivo);
+      await actualizarGasto(gasto.id, { recibo_path: path });
+      setRecibo(path);
+    } catch (err) {
+      setErrorRecibo(`No se pudo subir la foto: ${err.message}`);
+    } finally {
+      setSubiendoRecibo(false);
+    }
+  };
+
+  const verRecibo = async () => {
+    setErrorRecibo("");
+    try {
+      window.open(await urlRecibo(recibo), "_blank", "noopener,noreferrer");
+    } catch (err) {
+      setErrorRecibo(`No se pudo abrir la foto: ${err.message}`);
+    }
   };
 
   return (
@@ -62,7 +88,7 @@ export default function NuevoGasto({ contexto, gasto, onGuardar, onBorrar, onCer
         </div>
 
         <div className="rubros">
-          {RUBROS.map((r) => (
+          {rubros.map((r) => (
             <button key={r.id}
               className={`rubro ${rubro === r.id ? "on" : ""}`}
               style={rubro === r.id ? { background: r.color, borderColor: r.color } : {}}
@@ -137,6 +163,23 @@ export default function NuevoGasto({ contexto, gasto, onGuardar, onBorrar, onCer
         <button className="link mas" onClick={() => setMas(!mas)}>
           {mas ? "Menos opciones" : "Más opciones"}
         </button>
+
+        {edicion && (
+          <div className="recibo">
+            <span className="etiqueta">Recibo</span>
+            <div className="quien-btns">
+              {recibo && (
+                <button type="button" className="quien-b" onClick={verRecibo}>Ver foto</button>
+              )}
+              <label className="quien-b recibo-subir">
+                {subiendoRecibo ? "Subiendo…" : recibo ? "Cambiar foto" : "Agregar foto"}
+                <input type="file" accept="image/*" capture="environment" hidden
+                  onChange={elegirRecibo} disabled={subiendoRecibo} />
+              </label>
+            </div>
+            {errorRecibo && <p className="error">{errorRecibo}</p>}
+          </div>
+        )}
 
         <button className="btn" onClick={guardar} disabled={!valido || guardando}>
           {guardando ? "Guardando…" : edicion ? "Guardar cambios" : "Guardar gasto"}

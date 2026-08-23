@@ -12,7 +12,7 @@ const celda = (v) => {
 const COLUMNAS = [
   ["Fecha", (g) => g.fecha],
   ["Descripción", (g) => g.descripcion],
-  ["Rubro", (g) => rubroDe(g.rubro).nombre],
+  ["Rubro", (g, alias, rubros) => rubroDe(g.rubro, rubros).nombre],
   ["Monto", (g) => g.monto],
   ["Moneda", (g) => g.moneda],
   ["Tipo de cambio", (g) => g.tc_a_base],
@@ -22,10 +22,10 @@ const COLUMNAS = [
   ["Le toca al otro", (g) => g.deuda],
 ];
 
-export function gastosACSV(gastos, alias) {
+export function gastosACSV(gastos, alias, rubros) {
   const filas = [
     COLUMNAS.map(([t]) => t).join(SEP),
-    ...gastos.map((g) => COLUMNAS.map(([, f]) => celda(f(g, alias))).join(SEP)),
+    ...gastos.map((g) => COLUMNAS.map(([, f]) => celda(f(g, alias, rubros))).join(SEP)),
   ];
   // BOM para que Excel reconozca el UTF-8 y no rompa los acentos
   return "﻿" + filas.join("\r\n");

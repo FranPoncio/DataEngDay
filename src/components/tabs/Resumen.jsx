@@ -3,9 +3,11 @@ import { supabase } from "../../lib/supabase";
 import { traerGastos, traerSaldos, rubroDe } from "../../lib/gastos";
 import { plata, MESES_LARGO, rangoMes } from "../../lib/formato";
 import { gastosACSV, bajarCSV } from "../../lib/csv";
+import EditarRubros from "../EditarRubros";
 
-export default function Resumen({ contexto }) {
-  const { grupo_id, miembros } = contexto;
+export default function Resumen({ contexto, onRecargarRubros }) {
+  const { grupo_id, miembros, rubros } = contexto;
+  const [editandoRubros, setEditandoRubros] = useState(false);
   const hoy = new Date();
   const [anio, setAnio] = useState(hoy.getFullYear());
   const [mes, setMes] = useState(hoy.getMonth());
@@ -53,9 +55,9 @@ export default function Resumen({ contexto }) {
     const mapa = new Map();
     gastos.forEach((g) => mapa.set(g.rubro, (mapa.get(g.rubro) || 0) + Number(g.monto_base)));
     return [...mapa.entries()]
-      .map(([rubro, total]) => ({ rubro, total, info: rubroDe(rubro) }))
+      .map(([rubro, total]) => ({ rubro, total, info: rubroDe(rubro, rubros) }))
       .sort((a, b) => b.total - a.total);
-  }, [gastos]);
+  }, [gastos, rubros]);
 
   const porPersonaRubro = useMemo(() => {
     const mapa = new Map();
@@ -85,7 +87,7 @@ export default function Resumen({ contexto }) {
       modo === "mes" ? `${anio}-${String(mes + 1).padStart(2, "0")}`
       : modo === "anio" ? String(anio)
       : "historico";
-    bajarCSV(`gastos-${sufijo}.csv`, gastosACSV(gastos, alias));
+    bajarCSV(`gastos-${sufijo}.csv`, gastosACSV(gastos, alias, rubros));
   };
 
   return (
@@ -160,9 +162,10 @@ export default function Resumen({ contexto }) {
 
       <section className={`saldo-mini ${empate ? "cero" : debo ? "debo" : "favor"}`}>
         <p className="chico">
-          {empate ? "Están a mano" : debo ? `Le debés a ${otro?.alias}` : `${otro?.alias} te debe`}
+          {!otro ? "Todavía no hay nadie más en el grupo"
+            : empate ? "Están a mano" : debo ? `Le debés a ${otro.alias}` : `${otro.alias} te debe`}
         </p>
-        {!empate && <p className="saldo-mini-n">${plata(miSaldo)}</p>}
+        {otro && !empate && <p className="saldo-mini-n">${plata(miSaldo)}</p>}
       </section>
 
       {gastos.length > 0 && (
@@ -175,8 +178,17 @@ export default function Resumen({ contexto }) {
 
       <footer className="pie">
         <span className="chico">Sesión de {contexto.yo?.alias}</span>
-        <button className="link" onClick={() => supabase.auth.signOut()}>Cerrar sesión</button>
+        <span>
+          <button className="link" onClick={() => setEditandoRubros(true)}>Categorías</button>
+          {" · "}
+          <button className="link" onClick={() => supabase.auth.signOut()}>Cerrar sesión</button>
+        </span>
       </footer>
+
+      {editandoRubros && (
+        <EditarRubros grupo_id={grupo_id} rubros={rubros}
+          onCambio={onRecargarRubros} onCerrar={() => setEditandoRubros(false)} />
+      )}
     </div>
   );
 }

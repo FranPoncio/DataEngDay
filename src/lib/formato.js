@@ -45,3 +45,6 @@ export const rangoMes = (anio, mes) => ({
   desde: toISO(new Date(anio, mes, 1)),
   hasta: toISO(new Date(anio, mes + 1, 0)),
 });
+
+export const sinAcentos = (s) =>
+  (s || "").normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();

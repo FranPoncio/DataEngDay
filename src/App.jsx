@@ -33,6 +33,14 @@ export default function App() {
     })();
   }, [sesion]);
 
+  const recargarRubros = async () => {
+    try {
+      setCtx(await traerContexto());
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+
   if (sesion === undefined) return <div className="cargando">Abriendo…</div>;
   if (!sesion) return <Login />;
 
@@ -52,7 +60,7 @@ export default function App() {
       {tab === "hoy" && <Hoy contexto={ctx} onIrA={setTab} />}
       {tab === "plan" && <Planning contexto={ctx} />}
       {tab === "gastos" && <Gastos contexto={ctx} />}
-      {tab === "resumen" && <Resumen contexto={ctx} />}
+      {tab === "resumen" && <Resumen contexto={ctx} onRecargarRubros={recargarRubros} />}
       <TabBar tab={tab} onCambiar={setTab} />
     </div>
   );

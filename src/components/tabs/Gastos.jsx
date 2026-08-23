@@ -4,20 +4,24 @@ import {
   saldarCuentas, sincronizarCola, cantidadEnCola, escucharCambios, rubroDe,
   recurrentesFaltantes, cargarRecurrentes,
 } from "../../lib/gastos";
-import { plata, fechaCorta, hoyISO, rangoMes } from "../../lib/formato";
+import { plata, fechaCorta, hoyISO, rangoMes, sinAcentos } from "../../lib/formato";
+import { useDeshacer } from "../../lib/deshacer";
 import NuevoGasto from "../NuevoGasto";
+import Toast from "../Toast";
 
 export default function Gastos({ contexto }) {
-  const { grupo_id, miembros, yo } = contexto;
+  const { grupo_id, miembros, yo, rubros } = contexto;
 
   const [gastos, setGastos] = useState([]);
   const [saldos, setSaldos] = useState([]);
   const [filtro, setFiltro] = useState(null);
+  const [busqueda, setBusqueda] = useState("");
   const [abrirNuevo, setAbrirNuevo] = useState(false);
   const [editando, setEditando] = useState(null);
   const [fijos, setFijos] = useState([]);
   const [enCola, setEnCola] = useState(cantidadEnCola());
   const [error, setError] = useState("");
+  const { pendiente, pedir, deshacer } = useDeshacer();
 
   const refrescar = useCallback(async () => {
     try {
@@ -64,10 +68,12 @@ export default function Gastos({ contexto }) {
   const otro = miembros.find((m) => m.user_id !== yo?.user_id);
   const miSaldo = Number(saldos.find((s) => s.user_id === yo?.user_id)?.saldo || 0);
 
-  const visibles = useMemo(
-    () => (filtro ? gastos.filter((g) => g.rubro === filtro) : gastos),
-    [gastos, filtro]
-  );
+  const visibles = useMemo(() => {
+    const q = sinAcentos(busqueda.trim());
+    return gastos.filter((g) =>
+      (!filtro || g.rubro === filtro) && (!q || sinAcentos(g.descripcion).includes(q))
+    );
+  }, [gastos, filtro, busqueda]);
 
   const porDia = useMemo(() => {
     const mapa = new Map();
@@ -87,11 +93,17 @@ export default function Gastos({ contexto }) {
     if (!pendiente) refrescar();
   };
 
-  const eliminar = async (id) => {
-    const anterior = gastos;
-    setGastos((prev) => prev.filter((g) => g.id !== id));
-    try { await borrarGasto(id); refrescar(); }
-    catch (e) { setGastos(anterior); setError(`No se pudo borrar: ${e.message}`); }
+  const eliminar = (id) => {
+    pedir({
+      mensaje: "Gasto borrado",
+      quitar: () => setGastos((prev) => prev.filter((g) => g.id !== id)),
+      restaurar: refrescar,
+      confirmar: async () => {
+        try { await borrarGasto(id); }
+        catch (e) { setError(`No se pudo borrar: ${e.message}`); }
+        refrescar();
+      },
+    });
   };
 
   const editar = async (cambios) => {
@@ -126,21 +138,27 @@ export default function Gastos({ contexto }) {
     <div className="tab-gastos">
       <header className={`balance ${empate ? "cero" : debo ? "debo" : "favor"}`}>
         <p className="balance-lbl">
-          {empate ? "Están a mano" : debo ? `Le debés a ${otro?.alias}` : `${otro?.alias} te debe`}
+          {!otro ? "Todavía no hay nadie más en el grupo"
+            : empate ? "Están a mano" : debo ? `Le debés a ${otro.alias}` : `${otro.alias} te debe`}
         </p>
-        {!empate && (
+        {otro && !empate && (
           <p className="balance-n">
             <span className="signo">$</span>{plata(miSaldo)}
           </p>
         )}
-        {!empate && <button className="saldar" onClick={saldar}>Saldar cuentas</button>}
+        {otro && !empate && <button className="saldar" onClick={saldar}>Saldar cuentas</button>}
         {enCola > 0 && <p className="cola">{enCola} sin sincronizar</p>}
       </header>
+
+      <div className="buscador">
+        <input type="search" value={busqueda} onChange={(e) => setBusqueda(e.target.value)}
+          placeholder="Buscar gasto…" />
+      </div>
 
       <nav className="filtros">
         <button className={`f ${!filtro ? "on" : ""}`} onClick={() => setFiltro(null)}>Todo</button>
         {[...new Set(gastos.map((g) => g.rubro))].map((r) => {
-          const info = rubroDe(r);
+          const info = rubroDe(r, rubros);
           return (
             <button key={r} className={`f ${filtro === r ? "on" : ""}`}
               style={filtro === r ? { background: info.color, borderColor: info.color, color: "#fff" } : {}}
@@ -171,7 +189,7 @@ export default function Gastos({ contexto }) {
           <section key={fecha}>
             <h2 className="dia">{fechaCorta(fecha)}</h2>
             {items.map((g) => {
-              const info = rubroDe(g.rubro);
+              const info = rubroDe(g.rubro, rubros);
               const mio = g.pagador_id === yo.user_id;
               return (
                 <article key={g.id} className={`gasto ${g.pendiente ? "pend" : ""}`}
@@ -183,6 +201,7 @@ export default function Gastos({ contexto }) {
                       {mio ? "Pagaste vos" : `Pagó ${alias(g.pagador_id)}`}
                       {g.split === "propio" && " · no se divide"}
                       {g.moneda !== "NZD" && ` · ${g.monto} ${g.moneda}`}
+                      {g.recibo_path && " · con foto"}
                       {g.pendiente && " · sin sincronizar"}
                     </p>
                   </div>
@@ -195,6 +214,8 @@ export default function Gastos({ contexto }) {
       </main>
 
       <button className="fab" onClick={() => setAbrirNuevo(true)} aria-label="Cargar gasto">+</button>
+
+      {pendiente && <Toast mensaje={pendiente.mensaje} onDeshacer={deshacer} />}
 
       {abrirNuevo && (
         <NuevoGasto contexto={contexto} onGuardar={guardarGasto} onCerrar={() => setAbrirNuevo(false)} />

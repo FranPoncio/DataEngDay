@@ -3,12 +3,12 @@ import {
   traerGrupo, setFechaLlegada, traerTareas, sembrarSiHaceFalta,
   agregarTarea, actualizarTarea, borrarTarea, escucharPlan, porCercania, ESTADOS,
 } from "../../lib/tareas";
+import { sinAcentos } from "../../lib/formato";
+import { useDeshacer } from "../../lib/deshacer";
 import NuevaTarea from "../NuevaTarea";
 import TarjetaTarea from "../TarjetaTarea";
+import Toast from "../Toast";
 import Calendario from "./Calendario";
-
-const sinAcentos = (s) =>
-  (s || "").normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
 
 export default function Planning({ contexto }) {
   const { grupo_id } = contexto;
@@ -20,6 +20,7 @@ export default function Planning({ contexto }) {
   const [abrirNueva, setAbrirNueva] = useState(false);
   const [desplegado, setDesplegado] = useState({});
   const [error, setError] = useState("");
+  const { pendiente, pedir, deshacer } = useDeshacer();
 
   const alternar = (id) => setDesplegado((prev) => ({ ...prev, [id]: !prev[id] }));
 
@@ -68,12 +69,16 @@ export default function Planning({ contexto }) {
     catch (e) { setTareas(anterior); setError(`No se pudo actualizar: ${e.message}`); }
   };
 
-  const eliminar = async (id) => {
-    if (!confirm("¿Borrar esta tarea?")) return;
-    const anterior = tareas;
-    setTareas((prev) => prev.filter((t) => t.id !== id));
-    try { await borrarTarea(id); }
-    catch (e) { setTareas(anterior); setError(`No se pudo borrar: ${e.message}`); }
+  const eliminar = (id) => {
+    pedir({
+      mensaje: "Tarea borrada",
+      quitar: () => setTareas((prev) => prev.filter((t) => t.id !== id)),
+      restaurar: async () => setTareas(await traerTareas(grupo_id)),
+      confirmar: async () => {
+        try { await borrarTarea(id); }
+        catch (e) { setError(`No se pudo borrar: ${e.message}`); }
+      },
+    });
   };
 
   const filtradas = useMemo(() => {
@@ -181,6 +186,8 @@ export default function Planning({ contexto }) {
       {abrirNueva && (
         <NuevaTarea contexto={contexto} onGuardar={guardarTarea} onCerrar={() => setAbrirNueva(false)} />
       )}
+
+      {pendiente && <Toast mensaje={pendiente.mensaje} onDeshacer={deshacer} />}
     </div>
   );
 }

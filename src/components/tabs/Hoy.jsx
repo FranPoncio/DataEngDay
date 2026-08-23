@@ -1,30 +1,39 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { traerGastos, traerSaldos, rubroDe } from "../../lib/gastos";
+import {
+  traerGastos, traerSaldos, rubroDe, recurrentesFaltantes, cargarRecurrentes,
+} from "../../lib/gastos";
 import {
   traerGrupo, traerTareas, actualizarTarea, borrarTarea, escucharPlan, porCercania,
 } from "../../lib/tareas";
-import { plata, fechaCorta } from "../../lib/formato";
+import { plata, fechaCorta, hoyISO, rangoMes } from "../../lib/formato";
+import { useDeshacer } from "../../lib/deshacer";
 import TarjetaTarea from "../TarjetaTarea";
+import Toast from "../Toast";
 
 export default function Hoy({ contexto, onIrA }) {
-  const { grupo_id, miembros, yo } = contexto;
+  const { grupo_id, miembros, yo, rubros } = contexto;
   const [tareas, setTareas] = useState([]);
   const [gastos, setGastos] = useState([]);
   const [saldos, setSaldos] = useState([]);
+  const [fijos, setFijos] = useState([]);
   const [listo, setListo] = useState(false);
   const [error, setError] = useState("");
+  const { pendiente, pedir, deshacer } = useDeshacer();
 
   const refrescar = useCallback(async () => {
     try {
       const g = await traerGrupo(grupo_id);
-      const [t, gs, s] = await Promise.all([
+      const n = new Date();
+      const [t, gs, s, f] = await Promise.all([
         g.fecha_llegada ? traerTareas(grupo_id) : Promise.resolve([]),
         traerGastos(grupo_id, { limite: 10 }),
         traerSaldos(grupo_id),
+        recurrentesFaltantes(grupo_id, rangoMes(n.getFullYear(), n.getMonth())),
       ]);
       setTareas(t);
       setGastos(gs);
       setSaldos(s);
+      setFijos(f);
       setError("");
     } catch (e) {
       setError(`No se pudo cargar: ${e.message}`);
@@ -32,6 +41,13 @@ export default function Hoy({ contexto, onIrA }) {
       setListo(true);
     }
   }, [grupo_id]);
+
+  const ponerFijos = async () => {
+    try {
+      await cargarRecurrentes(fijos, hoyISO());
+      await refrescar();
+    } catch (e) { setError(`No se pudieron cargar los fijos: ${e.message}`); }
+  };
 
   useEffect(() => {
     (async () => { await refrescar(); })();
@@ -49,12 +65,16 @@ export default function Hoy({ contexto, onIrA }) {
     catch (e) { setTareas(anterior); setError(`No se pudo actualizar: ${e.message}`); }
   };
 
-  const eliminar = async (id) => {
-    if (!confirm("¿Borrar esta tarea?")) return;
-    const anterior = tareas;
-    setTareas((prev) => prev.filter((t) => t.id !== id));
-    try { await borrarTarea(id); }
-    catch (e) { setTareas(anterior); setError(`No se pudo borrar: ${e.message}`); }
+  const eliminar = (id) => {
+    pedir({
+      mensaje: "Tarea borrada",
+      quitar: () => setTareas((prev) => prev.filter((t) => t.id !== id)),
+      restaurar: refrescar,
+      confirmar: async () => {
+        try { await borrarTarea(id); }
+        catch (e) { setError(`No se pudo borrar: ${e.message}`); }
+      },
+    });
   };
 
   const urgentes = useMemo(() => {
@@ -85,10 +105,23 @@ export default function Hoy({ contexto, onIrA }) {
       <button className={`saldo-hoy ${empate ? "cero" : debo ? "debo" : "favor"}`}
         onClick={() => onIrA("gastos")}>
         <span className="saldo-hoy-lbl">
-          {empate ? "Están a mano" : debo ? `Le debés a ${otro?.alias}` : `${otro?.alias} te debe`}
+          {!otro ? "Todavía no hay nadie más en el grupo"
+            : empate ? "Están a mano" : debo ? `Le debés a ${otro.alias}` : `${otro.alias} te debe`}
         </span>
-        {!empate && <span className="saldo-hoy-n">${plata(miSaldo)}</span>}
+        {otro && !empate && <span className="saldo-hoy-n">${plata(miSaldo)}</span>}
       </button>
+
+      {fijos.length > 0 && (
+        <div className="aviso-fijos">
+          <span>
+            {fijos.length === 1
+              ? "Falta cargar 1 gasto fijo de este mes"
+              : `Faltan cargar ${fijos.length} gastos fijos de este mes`}
+            <span className="chico"> · {fijos.map((f) => f.descripcion).join(", ")}</span>
+          </span>
+          <button className="link" onClick={ponerFijos}>Cargarlos</button>
+        </div>
+      )}
 
       {urgentes.atrasadas.length > 0 && (
         <section className="hoy-bloque">
@@ -118,7 +151,7 @@ export default function Hoy({ contexto, onIrA }) {
         <section className="hoy-bloque">
           <h2 className="hoy-tit">Últimos gastos</h2>
           {ultimos.map((g) => {
-            const info = rubroDe(g.rubro);
+            const info = rubroDe(g.rubro, rubros);
             return (
               <article key={g.id} className="gasto" onClick={() => onIrA("gastos")}>
                 <span className="punto" style={{ background: info.color }} />
@@ -134,6 +167,8 @@ export default function Hoy({ contexto, onIrA }) {
           })}
         </section>
       )}
+
+      {pendiente && <Toast mensaje={pendiente.mensaje} onDeshacer={deshacer} />}
     </div>
   );
 }
