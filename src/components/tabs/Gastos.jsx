@@ -8,6 +8,7 @@ import { plata, fechaCorta, hoyISO, rangoMes, sinAcentos, colorTexto } from "../
 import { useDeshacer } from "../../lib/deshacer";
 import NuevoGasto from "../NuevoGasto";
 import Toast from "../Toast";
+import RubroAvatar from "../RubroAvatar";
 
 export default function Gastos({ contexto }) {
   const { grupo_id, miembros, yo, rubros } = contexto;
@@ -194,7 +195,7 @@ export default function Gastos({ contexto }) {
               return (
                 <article key={g.id} className={`gasto ${g.pendiente ? "pend" : ""}`}
                   onClick={() => !g.pendiente && setEditando(g)}>
-                  <span className="punto" style={{ background: info.color }} />
+                  <RubroAvatar rubro={info} />
                   <div className="gasto-txt">
                     <p className="gasto-d">{g.descripcion}</p>
                     <p className="gasto-m">

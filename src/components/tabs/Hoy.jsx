@@ -9,6 +9,7 @@ import { plata, fechaCorta, hoyISO, rangoMes } from "../../lib/formato";
 import { useDeshacer } from "../../lib/deshacer";
 import TarjetaTarea from "../TarjetaTarea";
 import Toast from "../Toast";
+import RubroAvatar from "../RubroAvatar";
 
 export default function Hoy({ contexto, onIrA }) {
   const { grupo_id, miembros, yo, rubros } = contexto;
@@ -154,7 +155,7 @@ export default function Hoy({ contexto, onIrA }) {
             const info = rubroDe(g.rubro, rubros);
             return (
               <article key={g.id} className="gasto" onClick={() => onIrA("gastos")}>
-                <span className="punto" style={{ background: info.color }} />
+                <RubroAvatar rubro={info} />
                 <div className="gasto-txt">
                   <p className="gasto-d">{g.descripcion}</p>
                   <p className="gasto-m">
