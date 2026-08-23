@@ -25,6 +25,22 @@ export default function TarjetaTarea({ tarea, onCambiarEstado, onBorrar, compact
           </span>
           <span className="tarea-t">{tarea.titulo}</span>
         </button>
+
+        <div className="tarea-extra">
+          <span className={`chip-p p${prioridad.id}`}>{prioridad.nombre}</span>
+          {link && (
+            <a className="tarea-cal" href={link} target="_blank" rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              aria-label="Agregar a Google Calendar" title="Agregar a Google Calendar">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+                strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <rect x="3.5" y="5" width="17" height="15.5" rx="3" />
+                <path d="M3.5 9.5h17M8 3v4M16 3v4" />
+                <path d="M12 13v4M10 15h4" />
+              </svg>
+            </a>
+          )}
+        </div>
       </div>
 
       {abierta && (

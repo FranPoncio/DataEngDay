@@ -4,7 +4,7 @@ import {
   saldarCuentas, sincronizarCola, cantidadEnCola, escucharCambios, rubroDe,
   recurrentesFaltantes, cargarRecurrentes,
 } from "../../lib/gastos";
-import { plata, fechaCorta, hoyISO, rangoMes, sinAcentos } from "../../lib/formato";
+import { plata, fechaCorta, hoyISO, rangoMes, sinAcentos, colorTexto } from "../../lib/formato";
 import { useDeshacer } from "../../lib/deshacer";
 import NuevoGasto from "../NuevoGasto";
 import Toast from "../Toast";
@@ -161,7 +161,7 @@ export default function Gastos({ contexto }) {
           const info = rubroDe(r, rubros);
           return (
             <button key={r} className={`f ${filtro === r ? "on" : ""}`}
-              style={filtro === r ? { background: info.color, borderColor: info.color, color: "#fff" } : {}}
+              style={filtro === r ? { background: info.color, borderColor: info.color, color: colorTexto(info.color) } : {}}
               onClick={() => setFiltro(filtro === r ? null : r)}>
               {info.nombre}
             </button>

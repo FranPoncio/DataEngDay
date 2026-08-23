@@ -48,3 +48,19 @@ export const rangoMes = (anio, mes) => ({
 
 export const sinAcentos = (s) =>
   (s || "").normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+
+/* Elige texto claro u oscuro según el color de fondo (contraste WCAG), en vez
+   de asumir blanco: con categorías de color libre (el usuario elige cualquier
+   tono en "Editar categorías"), un fondo claro con texto blanco se vuelve
+   ilegible. */
+const luminancia = (hex) => {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+  const lin = (c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+};
+const contraste = (a, b) => {
+  const [hi, lo] = [luminancia(a), luminancia(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+};
+export const colorTexto = (fondo, oscuro = "#26211B", claro = "#FFFFFF") =>
+  contraste(claro, fondo) >= contraste(oscuro, fondo) ? claro : oscuro;

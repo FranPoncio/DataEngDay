@@ -3,11 +3,15 @@
 /* Una sola familia en toda la app: la jerarquía la dan el peso y el tamaño,
    no el cambio de tipografía. */
 :root{
-  --tinta:#17191D; --t2:#767C85; --papel:#EFF0F2; --alto:#FFFFFF;
-  --linea:#E0E2E6; --marca:#F0603C; --verde:#00A98C; --ocre:#C08A00;
+  --tinta:#26211B; --t2:#6E6255; --papel:#F6F0E5; --alto:#FFFDF8;
+  --linea:#E5DACB; --marca:#B8451F; --marca-claro:#FF7A4D;
+  --verde:#3F6B29; --verde-claro:#7CC168; --ocre:#93600A;
   --display:'Space Grotesk',system-ui,-apple-system,sans-serif;
   --texto:'Space Grotesk',system-ui,-apple-system,sans-serif;
   --datos:'Space Grotesk',system-ui,-apple-system,sans-serif;
+  /* Escala de formas: nada de esquinas apenas curvas — las tarjetas y
+     los campos se sienten redondeados de verdad, no "rectángulos con bordes limados". */
+  --r-field:12px; --r-banner:14px; --r-card:16px; --r-hero:22px;
 }
 /* Los números que se comparan en columna alinean con cifras tabulares */
 .gasto-n,.torta-monto,.tabla-resumen td,.balance-n,.saldo-mini-n,.tarea-f,.bloque-n{
@@ -24,29 +28,29 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--marca);outline-
 
 .chico{font-size:12.5px;color:var(--t2);}
 .error{color:var(--marca);font-size:13px;}
-.error.banda{margin:0 16px;padding:9px 12px;background:rgba(240,96,60,.1);border-radius:10px;}
+.error.banda{margin:0 16px;padding:10px 13px;background:rgba(184,69,31,.12);border-radius:var(--r-banner);}
 .cargando{padding:70px 24px;text-align:center;color:var(--t2);}
 .btn.recuperar{max-width:220px;margin:18px auto 0;}
 
 .app{max-width:600px;margin:0 auto;padding-bottom:130px;}
 
-.balance{background:var(--tinta);color:var(--alto);padding:26px 20px 22px;border-radius:0 0 22px 22px;text-align:center;}
-.balance-lbl{margin:0;font-size:13.5px;color:#9BA2AC;font-weight:500;}
+.balance{background:var(--tinta);color:var(--alto);padding:18px 20px 16px;border-radius:0 0 var(--r-hero) var(--r-hero);text-align:center;}
+.balance-lbl{margin:0;font-size:13.5px;color:#B0A594;font-weight:500;}
 .balance-n{font-family:var(--display);font-weight:700;font-size:50px;line-height:1;margin:8px 0 0;letter-spacing:-.03em;}
 .balance-n .signo{font-size:26px;vertical-align:super;margin-right:2px;opacity:.7;}
-.balance.favor .balance-n{color:#3FD9B4;}
-.balance.debo .balance-n{color:var(--marca);}
-.saldar{margin-top:14px;background:rgba(255,255,255,.12);color:var(--alto);padding:8px 18px;border-radius:99px;font-size:13px;font-weight:600;}
-.saldar:hover{background:rgba(255,255,255,.2);}
+.balance.favor .balance-n{color:var(--verde-claro);}
+.balance.debo .balance-n{color:var(--marca-claro);}
+.saldar{margin-top:14px;background:rgba(255,253,248,.14);color:var(--alto);padding:8px 18px;border-radius:99px;font-size:13px;font-weight:600;}
+.saldar:hover{background:rgba(255,253,248,.22);}
 .cola{margin:12px 0 0;font-size:11.5px;color:var(--ocre);}
 
 .filtros{display:flex;gap:6px;padding:14px 16px 6px;overflow-x:auto;}
-.filtros .f{font-size:12.5px;font-weight:600;padding:5px 13px;border:1px solid var(--linea);border-radius:99px;color:var(--t2);white-space:nowrap;}
+.filtros .f{font-size:12.5px;font-weight:600;padding:5px 12px;border:1px solid var(--linea);border-radius:99px;color:var(--t2);white-space:nowrap;}
 .filtros .f.on{background:var(--tinta);border-color:var(--tinta);color:var(--alto);}
 
 .lista{padding:8px 16px 0;}
-.dia{font-size:12px;font-weight:600;color:var(--t2);margin:20px 0 9px;letter-spacing:.02em;}
-.gasto{display:flex;align-items:center;gap:11px;background:var(--alto);border-radius:13px;padding:12px 14px;margin-bottom:7px;box-shadow:0 1px 2px rgba(23,25,29,.06);}
+.dia{font-size:12px;font-weight:600;color:var(--t2);margin:16px 0 7px;letter-spacing:.02em;}
+.gasto{display:flex;align-items:center;gap:9px;background:var(--alto);border-radius:var(--r-card);padding:8px 12px;margin-bottom:5px;box-shadow:0 1px 2px rgba(38,33,27,.07);}
 .gasto.pend{opacity:.65;border:1px dashed var(--ocre);}
 .punto{width:9px;height:9px;border-radius:50%;flex:none;}
 .gasto-txt{flex:1;min-width:0;}
@@ -59,12 +63,12 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--marca);outline-
   position:fixed;bottom:78px;left:50%;transform:translateX(-50%);
   width:58px;height:58px;border-radius:50%;background:var(--marca);color:#fff;
   font-size:30px;line-height:1;display:flex;align-items:center;justify-content:center;
-  box-shadow:0 6px 20px rgba(23,25,29,.22);
+  box-shadow:0 6px 20px rgba(38,33,27,.25);
 }
 .fab:active{transform:translateX(-50%) scale(.94);}
 
-.sheet-fondo{position:fixed;inset:0;background:rgba(23,25,29,.45);display:flex;align-items:flex-end;justify-content:center;z-index:20;}
-.sheet{background:var(--papel);width:100%;max-width:600px;border-radius:22px 22px 0 0;padding:10px 18px 26px;max-height:92vh;overflow-y:auto;animation:subir .22s ease-out;}
+.sheet-fondo{position:fixed;inset:0;background:rgba(38,33,27,.45);display:flex;align-items:flex-end;justify-content:center;z-index:20;}
+.sheet{background:var(--papel);width:100%;max-width:600px;border-radius:var(--r-hero) var(--r-hero) 0 0;padding:10px 16px 20px;max-height:92vh;overflow-y:auto;animation:subir .22s ease-out;}
 @keyframes subir{from{transform:translateY(30px);opacity:.6;}to{transform:none;opacity:1;}}
 .sheet-asa{width:40px;height:4px;background:var(--linea);border-radius:99px;margin:0 auto 18px;}
 
@@ -77,13 +81,13 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--marca);outline-
 .campo-monto input::-webkit-outer-spin-button,.campo-monto input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
 
 .rubros{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px;justify-content:center;}
-.rubro{font-size:13px;font-weight:600;padding:7px 14px;border:1px solid var(--linea);border-radius:99px;color:var(--t2);}
+.rubro{font-size:13px;font-weight:600;padding:6px 12px;border:1px solid var(--linea);border-radius:99px;color:var(--t2);}
 .rubro.on{color:#fff;}
 
 .quien{margin-bottom:14px;}
 .etiqueta,.extra label{display:block;font-size:12px;font-weight:700;color:var(--t2);margin-bottom:7px;}
 .quien-btns{display:flex;gap:7px;flex-wrap:wrap;}
-.quien-b{flex:1;min-width:90px;padding:11px;border:1px solid var(--linea);border-radius:11px;font-weight:600;font-size:14px;color:var(--t2);background:var(--alto);}
+.quien-b{flex:1;min-width:90px;padding:8px;border:1px solid var(--linea);border-radius:var(--r-field);font-weight:600;font-size:14px;color:var(--t2);background:var(--alto);}
 .quien-b.on{background:var(--tinta);border-color:var(--tinta);color:var(--alto);}
 
 .recibo{margin:14px 0;}
@@ -91,11 +95,11 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--marca);outline-
 
 .rubros-editor{margin:14px 0;display:flex;flex-direction:column;gap:8px;}
 .rubro-fila{display:flex;align-items:center;gap:9px;}
-.rubro-fila input[type="color"]{flex:none;width:34px;height:34px;padding:0;border:1px solid var(--linea);border-radius:9px;background:none;}
-.rubro-nombre{flex:1;padding:10px 12px;border:1px solid var(--linea);border-radius:10px;background:var(--alto);color:var(--tinta);}
+.rubro-fila input[type="color"]{flex:none;width:34px;height:34px;padding:0;border:1px solid var(--linea);border-radius:50%;background:none;}
+.rubro-nombre{flex:1;padding:10px 12px;border:1px solid var(--linea);border-radius:var(--r-field);background:var(--alto);color:var(--tinta);}
 .rubro-fila .link{flex:none;}
 
-.desc,.extra input{width:100%;padding:12px;border:1px solid var(--linea);border-radius:11px;background:var(--alto);color:var(--tinta);margin-bottom:12px;}
+.desc,.extra input{width:100%;padding:8px 12px;border:1px solid var(--linea);border-radius:var(--r-field);background:var(--alto);color:var(--tinta);margin-bottom:8px;}
 .extra{margin-top:6px;}
 .extra label{margin-top:10px;}
 
@@ -109,12 +113,12 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--marca);outline-
 .login-caja h1{font-family:var(--display);font-weight:700;font-size:38px;margin:0;}
 .login-sub{color:var(--t2);margin:4px 0 28px;}
 .login-caja label{display:block;text-align:left;font-size:12px;font-weight:700;color:var(--t2);margin-bottom:7px;}
-.login-caja input{width:100%;padding:13px;border:1px solid var(--linea);border-radius:11px;background:var(--alto);margin-bottom:14px;}
+.login-caja input{width:100%;padding:11px;border:1px solid var(--linea);border-radius:var(--r-field);background:var(--alto);margin-bottom:12px;}
 .login-ok p{margin:0 0 8px;}
 
 /* ------------------------------------------------------------- tab bar */
 .tabs{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--alto);border-top:1px solid var(--linea);padding:6px 6px calc(6px + env(safe-area-inset-bottom));z-index:10;}
-.tabs .t{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 2px;font-size:10.5px;font-weight:600;color:var(--t2);border-radius:10px;}
+.tabs .t{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 2px;font-size:10.5px;font-weight:600;color:var(--t2);border-radius:var(--r-field);}
 .tabs .t svg{width:21px;height:21px;}
 .tabs .t.on{color:var(--tinta);background:var(--papel);}
 .tab-placeholder{padding:70px 24px;text-align:center;color:var(--t2);}
@@ -129,7 +133,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--marca);outline-
 }
 .swimlane{
   flex:0 0 78%;max-width:300px;scroll-snap-align:start;
-  background:rgba(23,25,29,.045);border-radius:14px;padding:10px 9px 12px;
+  background:rgba(38,33,27,.05);border-radius:var(--r-card);padding:8px 7px 8px;
 }
 @media(min-width:620px){.swimlane{flex-basis:calc(33.333% - 7px);}}
 .swimlane .dia{margin:2px 2px 9px;font-family:var(--texto);font-weight:700;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--t2);}
@@ -137,7 +141,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--marca);outline-
 .bloque-cab{display:flex;align-items:center;justify-content:space-between;width:100%;padding:6px 2px;font-size:11.5px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;}
 .bloque-cab.estatico{margin:0;}
 .bloque-n{font-family:var(--datos);font-weight:400;}
-.tarea{background:var(--alto);border-radius:10px;margin-bottom:5px;overflow:hidden;border-left:3px solid var(--linea);box-shadow:0 1px 2px rgba(23,25,29,.07);}
+.tarea{background:var(--alto);border-radius:var(--r-card);margin-bottom:5px;overflow:hidden;border-left:3px solid var(--linea);box-shadow:0 1px 2px rgba(38,33,27,.08);}
 .tarea.p1{border-left-color:var(--marca);}
 .tarea.p2{border-left-color:var(--ocre);}
 .tarea.p3{border-left-color:var(--linea);}
@@ -149,15 +153,19 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--marca);outline-
 .chip-p.p3{background:var(--t2);}
 .tarea.realizada .tarea-t{text-decoration:line-through;color:var(--t2);}
 .tarea-fila{display:flex;align-items:stretch;}
-.tarea-check{display:flex;align-items:flex-start;padding:12px 2px 12px 11px;min-width:44px;}
+.tarea-check{display:flex;align-items:center;padding:7px 2px 7px 9px;min-width:36px;}
 .tarea-caja{
-  width:19px;height:19px;border-radius:6px;border:1.8px solid var(--linea);
-  display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;
+  width:18px;height:18px;border-radius:50%;border:1.8px solid var(--linea);
+  display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;
 }
 .tarea-check.haciendo .tarea-caja{border-color:var(--ocre);}
 .tarea-check.realizada .tarea-caja{background:var(--verde);border-color:var(--verde);}
 
-.tarea-cab{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;min-height:74px;padding:10px 11px 12px 2px;text-align:left;}
+.tarea-cab{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;padding:7px 6px 7px 2px;text-align:left;justify-content:center;}
+.tarea-extra{display:flex;align-items:center;gap:6px;flex:none;padding-right:10px;}
+.tarea-cal{display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:rgba(38,33,27,.06);color:var(--t2);flex:none;}
+.tarea-cal svg{width:14px;height:14px;}
+.tarea-cal:hover{background:rgba(38,33,27,.12);}
 .tarea-top{display:flex;align-items:center;gap:6px;}
 .tarea-fase{flex:1;min-width:0;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .tarea-punto{width:7px;height:7px;border-radius:50%;flex:none;}
@@ -179,10 +187,10 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--marca);outline-
 
 .llegada-form{max-width:340px;margin:60px auto;padding:0 20px;text-align:center;}
 .llegada-form h2{font-family:var(--display);font-size:22px;margin:0 0 6px;}
-.llegada-form input{width:100%;padding:13px;border:1px solid var(--linea);border-radius:11px;background:var(--alto);margin:16px 0;}
+.llegada-form input{width:100%;padding:11px;border:1px solid var(--linea);border-radius:var(--r-field);background:var(--alto);margin:14px 0;}
 
 .estado-btns{display:flex;gap:6px;flex-wrap:wrap;}
-.estado-b{flex:1;min-width:0;padding:6px 4px;border:1px solid var(--linea);border-radius:8px;font-weight:600;font-size:10.5px;color:var(--t2);background:var(--papel);}
+.estado-b{flex:1;min-width:0;padding:5px 8px;border:1px solid var(--linea);border-radius:99px;font-weight:600;font-size:10.5px;color:var(--t2);background:var(--papel);}
 .estado-b.on.pendiente{background:var(--t2);border-color:var(--t2);color:var(--alto);}
 .estado-b.on.haciendo{background:var(--ocre);border-color:var(--ocre);color:#fff;}
 .estado-b.on.realizada{background:var(--verde);border-color:var(--verde);color:var(--alto);}
@@ -190,15 +198,17 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--marca);outline-
 
 /* ----------------------------------------------------------- calendario */
 .periodo{display:flex;gap:5px;padding:14px 16px 0;justify-content:center;}
-.periodo-b{flex:1;max-width:100px;padding:7px;border:1px solid var(--linea);border-radius:9px;font-size:12.5px;font-weight:600;color:var(--t2);background:var(--alto);}
+.periodo-b{flex:1;max-width:100px;padding:7px;border:1px solid var(--linea);border-radius:99px;font-size:12.5px;font-weight:600;color:var(--t2);background:var(--alto);}
 .periodo-b.on{background:var(--tinta);border-color:var(--tinta);color:var(--alto);}
 
 .mes-nav{display:flex;align-items:center;justify-content:center;gap:18px;padding:14px 16px 4px;font-family:var(--display);font-weight:700;font-size:16px;}
 .mes-nav .link{font-size:20px;}
 
+/* Los días del calendario son círculos, no celdas — el mismo lenguaje que
+   Google/Apple Calendar, y el punto donde más se notaba que "todo era un cuadrado". */
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;padding:10px 16px 0;}
 .cal-cab{text-align:center;font-size:11px;color:var(--t2);font-weight:700;padding-bottom:4px;}
-.cal-dia{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border-radius:10px;font-size:13px;color:var(--tinta);background:var(--alto);}
+.cal-dia{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border-radius:50%;font-size:13px;color:var(--tinta);background:var(--alto);}
 .cal-dia.vacio-celda{background:none;}
 .cal-dia.hoy{box-shadow:inset 0 0 0 1.5px var(--marca);}
 .cal-dia.sel{background:var(--tinta);color:var(--alto);}
@@ -207,7 +217,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--marca);outline-
 .cal-punto.pendiente{background:var(--t2);}
 .cal-punto.haciendo{background:var(--ocre);}
 .cal-punto.realizada{background:var(--verde);}
-.cal-dia.sel .cal-punto.pendiente{background:#B9BEC6;}
+.cal-dia.sel .cal-punto.pendiente{background:#D8CCB9;}
 
 .agenda{padding:16px 16px 0;}
 
@@ -218,8 +228,8 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--marca);outline-
 .barras-tit .chico{text-transform:none;letter-spacing:0;font-weight:400;}
 .barra-fila{display:grid;grid-template-columns:78px 1fr auto 30px;align-items:center;gap:8px;margin-bottom:9px;}
 .barra-nombre{font-size:12px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.barra-pista{display:block;height:16px;background:rgba(23,25,29,.05);border-radius:4px;overflow:hidden;}
-.barra{display:block;height:100%;border-radius:0 4px 4px 0;min-width:3px;}
+.barra-pista{display:block;height:16px;background:rgba(38,33,27,.06);border-radius:99px;overflow:hidden;}
+.barra{display:block;height:100%;border-radius:99px;min-width:8px;}
 .barra-monto{font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;}
 .barra-pct{text-align:right;font-variant-numeric:tabular-nums;}
 
@@ -235,43 +245,43 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--marca);outline-
 /* ------------------------------------------------------------------ hoy */
 .tab-hoy{padding:14px 16px 0;}
 .saldo-hoy{
-  display:flex;flex-direction:column;gap:3px;width:100%;padding:18px;margin-bottom:20px;
-  background:var(--tinta);color:var(--alto);border-radius:16px;text-align:left;
+  display:flex;flex-direction:column;gap:2px;width:100%;padding:13px 16px;margin-bottom:12px;
+  background:var(--tinta);color:var(--alto);border-radius:var(--r-hero);text-align:left;
 }
-.saldo-hoy-lbl{font-size:13px;color:#9BA2AC;font-weight:500;}
+.saldo-hoy-lbl{font-size:13px;color:#B0A594;font-weight:500;}
 .saldo-hoy-n{font-size:32px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;}
-.saldo-hoy.debo .saldo-hoy-n{color:var(--marca);}
-.saldo-hoy.favor .saldo-hoy-n{color:#3FD9B4;}
+.saldo-hoy.debo .saldo-hoy-n{color:var(--marca-claro);}
+.saldo-hoy.favor .saldo-hoy-n{color:var(--verde-claro);}
 
-.hoy-bloque{margin-bottom:22px;}
+.hoy-bloque{margin-bottom:18px;}
 .hoy-tit{margin:0 0 9px;font-size:11.5px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.05em;}
 .hoy-tit.atrasado{color:var(--marca);}
 
 .buscador{padding:10px 16px 0;}
-.buscador input{width:100%;padding:10px 13px;border:1px solid var(--linea);border-radius:11px;background:var(--alto);color:var(--tinta);font-size:14px;}
+.buscador input{width:100%;padding:9px 12px;border:1px solid var(--linea);border-radius:var(--r-field);background:var(--alto);color:var(--tinta);font-size:14px;}
 
 .pie{display:flex;align-items:center;justify-content:space-between;margin:28px 16px 0;padding-top:16px;border-top:1px solid var(--linea);}
 .exportar{margin:22px 16px 0;text-align:center;}
 
-.aviso-fijos{display:flex;align-items:center;gap:12px;margin:12px 16px 0;padding:11px 13px;background:rgba(192,138,0,.1);border-radius:11px;font-size:13px;}
+.aviso-fijos{display:flex;align-items:center;gap:10px;margin:10px 16px 0;padding:8px 12px;background:rgba(147,96,10,.12);border-radius:var(--r-banner);font-size:13px;}
 .aviso-fijos span{flex:1;}
 .aviso-fijos .link{flex:none;white-space:nowrap;}
 
 .toast{
   position:fixed;bottom:76px;left:16px;right:16px;max-width:568px;margin:0 auto;
   display:flex;align-items:center;justify-content:space-between;gap:12px;
-  padding:12px 16px;background:var(--tinta);color:var(--alto);border-radius:12px;
-  font-size:13.5px;box-shadow:0 6px 20px rgba(23,25,29,.28);z-index:15;
+  padding:9px 14px;background:var(--tinta);color:var(--alto);border-radius:var(--r-card);
+  font-size:13.5px;box-shadow:0 6px 20px rgba(38,33,27,.3);z-index:15;
   animation:subir .18s ease-out;
 }
-.toast .link{flex:none;color:var(--marca);font-weight:600;}
+.toast .link{flex:none;color:var(--alto);font-weight:700;text-decoration:underline;text-underline-offset:2px;}
 
-.fijo{display:flex;align-items:center;gap:9px;width:100%;margin-top:14px;padding:11px;border:1px solid var(--linea);border-radius:11px;background:var(--alto);font-size:13.5px;text-align:left;color:var(--t2);}
+.fijo{display:flex;align-items:center;gap:9px;width:100%;margin-top:10px;padding:8px 12px;border:1px solid var(--linea);border-radius:var(--r-field);background:var(--alto);font-size:13.5px;text-align:left;color:var(--t2);}
 .fijo.on{border-color:var(--verde);color:var(--tinta);}
-.fijo-caja{width:19px;height:19px;flex:none;border-radius:6px;border:1.8px solid var(--linea);display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;}
+.fijo-caja{width:18px;height:18px;flex:none;border-radius:50%;border:1.8px solid var(--linea);display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;}
 .fijo.on .fijo-caja{background:var(--verde);border-color:var(--verde);}
 
-.saldo-mini{margin:18px 16px 0;padding:16px;border-radius:14px;background:var(--alto);text-align:center;}
+.saldo-mini{margin:14px 16px 0;padding:11px;border-radius:var(--r-card);background:var(--alto);text-align:center;}
 .saldo-mini p{margin:0;}
 .saldo-mini .chico{color:var(--t2);font-weight:600;}
 .saldo-mini-n{font-family:var(--display);font-weight:700;font-size:26px;margin-top:4px !important;}

@@ -254,21 +254,22 @@ export function escucharCambios(grupo_id, alCambiar) {
 /* ----------------------------------------------------------------- rubros */
 
 /* Orden y valores validados con el script de accesibilidad del skill dataviz:
-   pasan banda de luminosidad, chroma, separación para daltonismo y contraste.
-   Si se reordenan o se cambia un color hay que volver a validarlos. */
-/* Lista default: se usa como semilla en la migración 0007 y como respaldo
+   pasan banda de luminosidad, chroma, separación para daltonismo y contraste
+   (paleta cálida, contraste vs. superficie #F6F0E5 — el nuevo --papel).
+   Si se reordenan o se cambia un color hay que volver a validarlos.
+   Lista default: se usa como semilla en la migración 0007 y como respaldo
    si `rubros` todavía no cargó (o la migración no corrió) — la app nunca
    se queda sin categorías para mostrar. La lista real y editable por grupo
    vive en la tabla `rubros` (ver traerRubros más abajo). */
 export const RUBROS = [
-  { id: "casa", nombre: "Casa", color: "#00997F" },
-  { id: "comida", nombre: "Comida", color: "#C43D4B" },
-  { id: "estudio", nombre: "Estudio", color: "#2D62C4" },
-  { id: "tramites", nombre: "Trámites", color: "#A87200" },
-  { id: "salidas", nombre: "Salidas", color: "#8B3FBF" },
-  { id: "transporte", nombre: "Transporte", color: "#0092B0" },
-  { id: "setup", nombre: "Setup", color: "#C2186B" },
-  { id: "otros", nombre: "Otros", color: "#5E7A18" },
+  { id: "casa", nombre: "Casa", color: "#B8541F" },
+  { id: "comida", nombre: "Comida", color: "#02836F" },
+  { id: "estudio", nombre: "Estudio", color: "#B98418" },
+  { id: "tramites", nombre: "Trámites", color: "#7A5091" },
+  { id: "salidas", nombre: "Salidas", color: "#7A9A2E" },
+  { id: "transporte", nombre: "Transporte", color: "#AD4F5E" },
+  { id: "setup", nombre: "Setup", color: "#3A6FD1" },
+  { id: "otros", nombre: "Otros", color: "#A63D33" },
 ];
 
 export const rubroDe = (id, rubros = RUBROS) =>

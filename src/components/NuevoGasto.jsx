@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { tasaDe, subirRecibo, urlRecibo, actualizarGasto } from "../lib/gastos";
-import { hoyISO } from "../lib/formato";
+import { hoyISO, colorTexto } from "../lib/formato";
 
 /* Carga en tres toques: monto, rubro, quién pagó. Lo demás está detrás de
    "más opciones". Si recibe `gasto`, edita ese en vez de crear uno nuevo. */
@@ -91,7 +91,7 @@ export default function NuevoGasto({ contexto, gasto, onGuardar, onBorrar, onCer
           {rubros.map((r) => (
             <button key={r.id}
               className={`rubro ${rubro === r.id ? "on" : ""}`}
-              style={rubro === r.id ? { background: r.color, borderColor: r.color } : {}}
+              style={rubro === r.id ? { background: r.color, borderColor: r.color, color: colorTexto(r.color) } : {}}
               onClick={() => setRubro(r.id)}>
               {r.nombre}
             </button>
